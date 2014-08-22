@@ -1,0 +1,27 @@
+{
+    "name": "contao-components/mootools",
+    "type": "component",
+    "description": "MooTools integration for Contao Open Source CMS",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Leo Feyer",
+            "homepage": "https://github.com/leofeyer"
+        }
+    ],
+    "require": {
+        "robloach/component-installer": "~0.0"
+    },
+    "extra": {
+        "component": {
+            "scripts": [
+                "js/mootools.min.js"
+            ],
+            "files": [
+                "js/mootools-core.min.js",
+                "js/mootools-more.min.js",
+                "js/mootools-mobile.min.js"
+            ]
+        }
+    }
+}
