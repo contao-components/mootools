@@ -1,6 +1,6 @@
 {
     "name": "contao-components/mootools",
-    "type": "component",
+    "type": "contao-component",
     "description": "MooTools integration for Contao Open Source CMS",
     "license": "MIT",
     "authors": [
@@ -10,18 +10,6 @@
         }
     ],
     "require": {
-        "robloach/component-installer": "~0.0"
-    },
-    "extra": {
-        "component": {
-            "scripts": [
-                "js/mootools.min.js"
-            ],
-            "files": [
-                "js/mootools-core.min.js",
-                "js/mootools-more.min.js",
-                "js/mootools-mobile.min.js"
-            ]
-        }
+        "contao-components/installer": "~1.0"
     }
 }
