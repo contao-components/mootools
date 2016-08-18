@@ -1463,7 +1463,7 @@ this.Events = new Class({
 	addEvent: function(type, fn, internal){
 		type = removeOn(type);
 
-		
+
 
 		this.$events[type] = (this.$events[type] || []).include(fn);
 		if (internal) fn.internal = true;
@@ -7036,6 +7036,7 @@ Date.implement({
 					case 'L': return pad(d.get('ms'), 3);
 					case 'm': return pad((d.get('mo') + 1), 2);
 					case 'M': return pad(d.get('min'), 2);
+					case 'n': return (d.get('mo') + 1); // PATCH
 					case 'o': return d.get('ordinal');
 					case 'p': return Date.getMsg(d.get('ampm'));
 					case 's': return Math.round(d / 1000);
@@ -13243,7 +13244,7 @@ Browser.Features.Touch = (function(){
 		document.createEvent('TouchEvent').initTouchEvent('touchstart');
 		return true;
 	} catch (exception){}
-	
+
 	return false;
 })();
 
@@ -13313,17 +13314,17 @@ var events = {
 		active = true;
 		start = {x: touch.pageX, y: touch.pageY};
 	},
-	
+
 	touchmove: function(event){
 		if (disabled || !active) return;
-		
+
 		var touch = event.changedTouches[0],
 			end = {x: touch.pageX, y: touch.pageY};
 		if (this.retrieve(cancelKey) && Math.abs(start.y - end.y) > 10){
 			active = false;
 			return;
 		}
-		
+
 		var distance = this.retrieve(distanceKey, dflt),
 			delta = end.x - start.x,
 			isLeftSwipe = delta < -distance,
@@ -13331,13 +13332,13 @@ var events = {
 
 		if (!isRightSwipe && !isLeftSwipe)
 			return;
-		
+
 		event.preventDefault();
 		active = false;
 		event.direction = (isLeftSwipe ? 'left' : 'right');
 		event.start = start;
 		event.end = end;
-		
+
 		this.fireEvent(name, event);
 	},
 
