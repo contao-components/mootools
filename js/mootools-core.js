@@ -3,10 +3,10 @@
 MooTools: the javascript framework
 
 web build:
- - http://mootools.net/core/8ac7c8be294607dada0b5170c4eef8de
+ - http://mootools.net/core/builder/e426a9ae7167c5807b173d5deff673fc
 
 packager build:
- - packager build Core/Array Core/String Core/Number Core/Function Core/Object Core/Event Core/Browser Core/Class Core/Class.Extras Core/Slick.Parser Core/Slick.Finder Core/Element Core/Element.Style Core/Element.Event Core/Element.Delegation Core/Element.Dimensions Core/Fx Core/Fx.CSS Core/Fx.Tween Core/Fx.Morph Core/Fx.Transitions Core/Request Core/Request.HTML Core/Request.JSON Core/Cookie Core/JSON Core/DOMReady
+ - packager build Core/Array Core/String Core/Number Core/Function Core/Object Core/Event Core/Browser Core/Class Core/Class.Extras Class.Thenable Core/Slick.Parser Core/Slick.Finder Core/Element Core/Element.Style Core/Element.Event Core/Element.Delegation Core/Element.Dimensions Core/Fx Core/Fx.CSS Core/Fx.Tween Core/Fx.Morph Core/Fx.Transitions Core/Request Core/Request.HTML Core/Request.JSON Core/Cookie Core/JSON Core/DOMReady
 
 ...
 */
@@ -20,7 +20,7 @@ description: The heart of MooTools.
 
 license: MIT-style license.
 
-copyright: Copyright (c) 2006-2015 [Valerio Proietti](http://mad4milk.net/).
+copyright: Copyright (c) 2006-2016 [Valerio Proietti](http://mad4milk.net/).
 
 authors: The MooTools production team (http://mootools.net/developers/)
 
@@ -36,8 +36,8 @@ provides: [Core, MooTools, Type, typeOf, instanceOf, Native]
 (function(){
 
 this.MooTools = {
-	version: '1.5.2',
-	build: 'ed01297a1a19de0675404640e7377cf97694e131'
+	version: '1.6.0',
+	build: '529422872adfff401b901b8b6c7ca5114ee95e2b'
 };
 
 window.$ = null; // PATCH: see #5892
@@ -78,7 +78,7 @@ var hasOwnProperty = Object.prototype.hasOwnProperty;
 var enumerables = true;
 for (var i in {toString: 1}) enumerables = null;
 if (enumerables) enumerables = ['hasOwnProperty', 'valueOf', 'isPrototypeOf', 'propertyIsEnumerable', 'toLocaleString', 'toString', 'constructor'];
-function forEachObjectEnumberableKey(object, fn, bind) {
+function forEachObjectEnumberableKey(object, fn, bind){
 	if (enumerables) for (var i = enumerables.length; i--;){
 		var k = enumerables[i];
 		// signature has key-value, so overloadSetter can directly pass the
@@ -137,25 +137,33 @@ Function.prototype.implement = function(key, value){
 
 var slice = Array.prototype.slice;
 
-Function.from = function(item){
+Array.convert = function(item){
+	if (item == null) return [];
+	return (Type.isEnumerable(item) && typeof item != 'string') ? (typeOf(item) == 'array') ? item : slice.call(item) : [item];
+};
+
+Function.convert = function(item){
 	return (typeOf(item) == 'function') ? item : function(){
 		return item;
 	};
 };
 
-Array.from = function(item){
-	if (item == null) return [];
-	return (Type.isEnumerable(item) && typeof item != 'string') ? (typeOf(item) == 'array') ? item : slice.call(item) : [item];
-};
-
-Number.from = function(item){
+Number.convert = function(item){
 	var number = parseFloat(item);
 	return isFinite(number) ? number : null;
 };
 
-String.from = function(item){
+String.convert = function(item){
 	return item + '';
 };
+
+/*<1.5compat>*/
+Array.from = Array.convert;
+/*</1.5compat>*/
+
+Function.from = Function.convert;
+Number.from = Number.convert;
+String.from = String.convert;
 
 // hide, protect
 
@@ -187,7 +195,6 @@ var Type = this.Type = function(name, object){
 			object.prototype.$family = (function(){
 				return lower;
 			}).hide();
-
 		}
 	}
 
@@ -369,7 +376,6 @@ Object.extend({
 
 Object.each = Object.forEach;
 
-
 // Array & Object cloning, Object merging and appending
 
 var cloneOf = function(item){
@@ -391,7 +397,7 @@ var mergeOne = function(source, key, current){
 		case 'object':
 			if (typeOf(source[key]) == 'object') Object.merge(source[key], current);
 			else source[key] = Object.clone(current);
-		break;
+			break;
 		case 'array': source[key] = current.clone(); break;
 		default: source[key] = current;
 	}
@@ -438,8 +444,6 @@ var UID = Date.now();
 String.extend('uniqueID', function(){
 	return (UID++).toString(36);
 });
-
-
 
 })();
 
@@ -748,13 +752,17 @@ Number.implement({
 Number.alias('each', 'times');
 
 (function(math){
-	var methods = {};
-	math.each(function(name){
-		if (!Number[name]) methods[name] = function(){
-			return Math[name].apply(null, [this].concat(Array.from(arguments)));
-		};
-	});
-	Number.implement(methods);
+
+var methods = {};
+
+math.each(function(name){
+	if (!Number[name]) methods[name] = function(){
+		return Math[name].apply(null, [this].concat(Array.convert(arguments)));
+	};
+});
+
+Number.implement(methods);
+
 })(['abs', 'acos', 'asin', 'atan', 'atan2', 'ceil', 'cos', 'exp', 'floor', 'log', 'max', 'min', 'pow', 'sin', 'sqrt', 'tan']);
 
 /*
@@ -790,7 +798,7 @@ Function.implement({
 
 	attempt: function(args, bind){
 		try {
-			return this.apply(bind, Array.from(args));
+			return this.apply(bind, Array.convert(args));
 		} catch (e){}
 
 		return null;
@@ -819,7 +827,7 @@ Function.implement({
 
 	pass: function(args, bind){
 		var self = this;
-		if (args != null) args = Array.from(args);
+		if (args != null) args = Array.convert(args);
 		return function(){
 			return self.apply(bind, args || arguments);
 		};
@@ -852,8 +860,6 @@ provides: [Object, Hash]
 */
 
 (function(){
-
-var hasOwnProperty = Object.prototype.hasOwnProperty;
 
 Object.extend({
 
@@ -945,7 +951,7 @@ Object.extend({
 						qs[i] = val;
 					});
 					result = Object.toQueryString(qs, key);
-				break;
+					break;
 				default: result = key + '=' + encodeURIComponent(value);
 			}
 			if (value != null) queryString.push(result);
@@ -1130,7 +1136,7 @@ Browser.extend({
 
 this.Window = this.$constructor = new Type('Window', function(){});
 
-this.$family = Function.from('window').hide();
+this.$family = Function.convert('window').hide();
 
 Window.mirror(function(name, method){
 	window[name] = method;
@@ -1138,7 +1144,7 @@ Window.mirror(function(name, method){
 
 this.Document = document.$constructor = new Type('Document', function(){});
 
-document.$family = Function.from('document').hide();
+document.$family = Function.convert('document').hide();
 
 Document.mirror(function(name, method){
 	document[name] = method;
@@ -1148,7 +1154,7 @@ document.html = document.documentElement;
 if (!document.head) document.head = document.getElementsByTagName('head')[0];
 
 if (document.execCommand) try {
-	document.execCommand("BackgroundImageCache", false, true);
+	document.execCommand('BackgroundImageCache', false, true);
 } catch (e){}
 
 /*<ltIE9>*/
@@ -1162,11 +1168,11 @@ if (this.attachEvent && !this.addEventListener){
 }
 
 // IE fails on collections and <select>.options (refers to <select>)
-var arrayFrom = Array.from;
+var arrayFrom = Array.convert;
 try {
 	arrayFrom(document.html.childNodes);
-} catch(e){
-	Array.from = function(item){
+} catch (e){
+	Array.convert = function(item){
 		if (typeof item != 'string' && Type.isEnumerable(item) && typeOf(item) != 'array'){
 			var i = item.length, array = new Array(i);
 			while (i--) array[i] = item[i];
@@ -1180,7 +1186,7 @@ try {
 	['pop', 'push', 'reverse', 'shift', 'sort', 'splice', 'unshift', 'concat', 'join', 'slice'].each(function(name){
 		var method = prototype[name];
 		Array[name] = function(item){
-			return method.apply(Array.from(item), slice.call(arguments, 1));
+			return method.apply(Array.convert(item), slice.call(arguments, 1));
 		};
 	});
 }
@@ -1208,15 +1214,15 @@ provides: Event
 
 var _keys = {};
 var normalizeWheelSpeed = function(event){
-    var normalized;
-    if (event.wheelDelta){
-        normalized = event.wheelDelta % 120 == 0 ? event.wheelDelta / 120 : event.wheelDelta / 12;
-    } else {
-        var rawAmount = event.deltaY || event.detail || 0;
-        normalized = -(rawAmount % 3 == 0 ? rawAmount / 3 : rawAmount * 10);
-    }
-    return normalized;
-}
+	var normalized;
+	if (event.wheelDelta){
+		normalized = event.wheelDelta % 120 == 0 ? event.wheelDelta / 120 : event.wheelDelta / 12;
+	} else {
+		var rawAmount = event.deltaY || event.detail || 0;
+		normalized = -(rawAmount % 3 == 0 ? rawAmount / 3 : rawAmount * 10);
+	}
+	return normalized;
+};
 
 var DOMEvent = this.DOMEvent = new Type('DOMEvent', function(event, win){
 	if (!win) win = window;
@@ -1367,7 +1373,7 @@ var reset = function(object){
 				var F = function(){};
 				F.prototype = value;
 				object[key] = reset(new F);
-			break;
+				break;
 			case 'array': object[key] = value.clone(); break;
 		}
 	}
@@ -1420,7 +1426,7 @@ Class.Mutators = {
 	},
 
 	Implements: function(items){
-		Array.from(items).each(function(item){
+		Array.convert(items).each(function(item){
 			var instance = new item;
 			for (var key in instance) implement.call(this, key, instance[key], true);
 		}, this);
@@ -1479,7 +1485,6 @@ this.Events = new Class({
 
 	addEvent: function(type, fn, internal){
 		type = removeOn(type);
-
 		this.$events[type] = (this.$events[type] || []).include(fn);
 		if (internal) fn.internal = true;
 		return this;
@@ -1494,7 +1499,7 @@ this.Events = new Class({
 		type = removeOn(type);
 		var events = this.$events[type];
 		if (!events) return this;
-		args = Array.from(args);
+		args = Array.convert(args);
 		events.each(function(fn){
 			if (delay) fn.delay(delay, this, args);
 			else fn.apply(this, args);
@@ -1544,6 +1549,230 @@ this.Options = new Class({
 	}
 
 });
+
+})();
+
+/*
+---
+
+name: Class.Thenable
+
+description: Contains a Utility Class that can be implemented into your own Classes to make them "thenable".
+
+license: MIT-style license.
+
+requires: Class
+
+provides: [Class.Thenable]
+
+...
+*/
+
+(function(){
+
+var STATE_PENDING = 0,
+	STATE_FULFILLED = 1,
+	STATE_REJECTED = 2;
+
+var Thenable = Class.Thenable = new Class({
+
+	$thenableState: STATE_PENDING,
+	$thenableResult: null,
+	$thenableReactions: [],
+
+	resolve: function(value){
+		resolve(this, value);
+		return this;
+	},
+
+	reject: function(reason){
+		reject(this, reason);
+		return this;
+	},
+
+	getThenableState: function(){
+		switch (this.$thenableState){
+			case STATE_PENDING:
+				return 'pending';
+
+			case STATE_FULFILLED:
+				return 'fulfilled';
+
+			case STATE_REJECTED:
+				return 'rejected';
+		}
+	},
+
+	resetThenable: function(reason){
+		reject(this, reason);
+		reset(this);
+		return this;
+	},
+
+	then: function(onFulfilled, onRejected){
+		if (typeof onFulfilled !== 'function') onFulfilled = 'Identity';
+		if (typeof onRejected !== 'function') onRejected = 'Thrower';
+
+		var thenable = new Thenable();
+
+		this.$thenableReactions.push({
+			thenable: thenable,
+			fulfillHandler: onFulfilled,
+			rejectHandler: onRejected
+		});
+
+		if (this.$thenableState !== STATE_PENDING){
+			react(this);
+		}
+
+		return thenable;
+	},
+
+	'catch': function(onRejected){
+		return this.then(null, onRejected);
+	}
+
+});
+
+Thenable.extend({
+	resolve: function(value){
+		var thenable;
+		if (value instanceof Thenable){
+			thenable = value;
+		} else {
+			thenable = new Thenable();
+			resolve(thenable, value);
+		}
+		return thenable;
+	},
+	reject: function(reason){
+		var thenable = new Thenable();
+		reject(thenable, reason);
+		return thenable;
+	}
+});
+
+// Private functions
+
+function resolve(thenable, value){
+	if (thenable.$thenableState === STATE_PENDING){
+		if (thenable === value){
+			reject(thenable, new TypeError('Tried to resolve a thenable with itself.'));
+		} else if (value && (typeof value === 'object' || typeof value === 'function')){
+			var then;
+			try {
+				then = value.then;
+			} catch (exception){
+				reject(thenable, exception);
+			}
+			if (typeof then === 'function'){
+				var resolved = false;
+				defer(function(){
+					try {
+						then.call(
+							value,
+							function(nextValue){
+								if (!resolved){
+									resolved = true;
+									resolve(thenable, nextValue);
+								}
+							},
+							function(reason){
+								if (!resolved){
+									resolved = true;
+									reject(thenable, reason);
+								}
+							}
+						);
+					} catch (exception){
+						if (!resolved){
+							resolved = true;
+							reject(thenable, exception);
+						}
+					}
+				});
+			} else {
+				fulfill(thenable, value);
+			}
+		} else {
+			fulfill(thenable, value);
+		}
+	}
+}
+
+function fulfill(thenable, value){
+	if (thenable.$thenableState === STATE_PENDING){
+		thenable.$thenableResult = value;
+		thenable.$thenableState = STATE_FULFILLED;
+
+		react(thenable);
+	}
+}
+
+function reject(thenable, reason){
+	if (thenable.$thenableState === STATE_PENDING){
+		thenable.$thenableResult = reason;
+		thenable.$thenableState = STATE_REJECTED;
+
+		react(thenable);
+	}
+}
+
+function reset(thenable){
+	if (thenable.$thenableState !== STATE_PENDING){
+		thenable.$thenableResult = null;
+		thenable.$thenableState = STATE_PENDING;
+	}
+}
+
+function react(thenable){
+	var state = thenable.$thenableState,
+		result = thenable.$thenableResult,
+		reactions = thenable.$thenableReactions,
+		type;
+
+	if (state === STATE_FULFILLED){
+		thenable.$thenableReactions = [];
+		type = 'fulfillHandler';
+	} else if (state == STATE_REJECTED){
+		thenable.$thenableReactions = [];
+		type = 'rejectHandler';
+	}
+
+	if (type){
+		defer(handle.pass([result, reactions, type]));
+	}
+}
+
+function handle(result, reactions, type){
+	for (var i = 0, l = reactions.length; i < l; ++i){
+		var reaction = reactions[i],
+			handler = reaction[type];
+
+		if (handler === 'Identity'){
+			resolve(reaction.thenable, result);
+		} else if (handler === 'Thrower'){
+			reject(reaction.thenable, result);
+		} else {
+			try {
+				resolve(reaction.thenable, handler(result));
+			} catch (exception){
+				reject(reaction.thenable, exception);
+			}
+		}
+	}
+}
+
+var defer;
+if (typeof process !== 'undefined' && typeof process.nextTick === 'function'){
+	defer = process.nextTick;
+} else if (typeof setImmediate !== 'undefined'){
+	defer = setImmediate;
+} else {
+	defer = function(fn){
+		setTimeout(fn, 0);
+	};
+}
 
 })();
 
@@ -1647,7 +1876,7 @@ __END__
 	)"
 */
 	"^(?:\\s*(,)\\s*|\\s*(<combinator>+)\\s*|(\\s+)|(<unicode>+|\\*)|\\#(<unicode>+)|\\.(<unicode>+)|\\[\\s*(<unicode1>+)(?:\\s*([*^$!~|]?=)(?:\\s*(?:([\"']?)(.*?)\\9)))?\\s*\\](?!\\])|(:+)(<unicode>+)(?:\\((?:(?:([\"'])([^\\13]*)\\13)|((?:\\([^)]+\\)|[^()]*)+))\\))?)"
-	.replace(/<combinator>/, '[' + escapeRegExp(">+~`!@$%^&={}\\;</") + ']')
+	.replace(/<combinator>/, '[' + escapeRegExp('>+~`!@$%^&={}\\;</') + ']')
 	.replace(/<unicode>/g, '(?:[\\w\\u00a1-\\uFFFF-]|\\\\[^\\s0-9a-f])')
 	.replace(/<unicode1>/g, '(?:[:\\w\\u00a1-\\uFFFF-]|\\\\[^\\s0-9a-f])')
 );
@@ -1862,7 +2091,7 @@ local.setDocument = function(document){
 	try {
 		testNode.innerHTML = '<a id="'+id+'"></a>';
 		features.isHTMLDocument = !!document.getElementById(id);
-	} catch(e){}
+	} catch (e){}
 
 	if (features.isHTMLDocument){
 
@@ -1877,7 +2106,7 @@ local.setDocument = function(document){
 			testNode.innerHTML = 'foo</foo>';
 			selected = testNode.getElementsByTagName('*');
 			starSelectsClosed = (selected && !!selected.length && selected[0].nodeName.charAt(0) == '/');
-		} catch(e){};
+		} catch (e){};
 
 		features.brokenStarGEBTN = starSelectsComments || starSelectsClosed;
 
@@ -1885,7 +2114,7 @@ local.setDocument = function(document){
 		try {
 			testNode.innerHTML = '<a name="'+ id +'"></a><b id="'+ id +'"></b>';
 			features.idGetsName = document.getElementById(id) === testNode.firstChild;
-		} catch(e){}
+		} catch (e){}
 
 		if (testNode.getElementsByClassName){
 
@@ -1895,13 +2124,13 @@ local.setDocument = function(document){
 				testNode.getElementsByClassName('b').length;
 				testNode.firstChild.className = 'b';
 				cachedGetElementsByClassName = (testNode.getElementsByClassName('b').length != 2);
-			} catch(e){};
+			} catch (e){};
 
 			// Opera 9.6 getElementsByClassName doesnt detects the class if its not the first one
 			try {
 				testNode.innerHTML = '<a class="a"></a><a class="f b a"></a>';
 				brokenSecondClassNameGEBCN = (testNode.getElementsByClassName('a').length != 2);
-			} catch(e){}
+			} catch (e){}
 
 			features.brokenGEBCN = cachedGetElementsByClassName || brokenSecondClassNameGEBCN;
 		}
@@ -1912,25 +2141,25 @@ local.setDocument = function(document){
 				testNode.innerHTML = 'foo</foo>';
 				selected = testNode.querySelectorAll('*');
 				features.starSelectsClosedQSA = (selected && !!selected.length && selected[0].nodeName.charAt(0) == '/');
-			} catch(e){}
+			} catch (e){}
 
 			// Safari 3.2 querySelectorAll doesnt work with mixedcase on quirksmode
 			try {
 				testNode.innerHTML = '<a class="MiX"></a>';
 				features.brokenMixedCaseQSA = !testNode.querySelectorAll('.MiX').length;
-			} catch(e){}
+			} catch (e){}
 
 			// Webkit and Opera dont return selected options on querySelectorAll
 			try {
 				testNode.innerHTML = '<select><option selected="selected">a</option></select>';
 				features.brokenCheckedQSA = (testNode.querySelectorAll(':checked').length == 0);
-			} catch(e){};
+			} catch (e){};
 
 			// IE returns incorrect results for attr[*^$]="" selectors on querySelectorAll
 			try {
 				testNode.innerHTML = '<a class=""></a>';
 				features.brokenEmptyAttributeQSA = (testNode.querySelectorAll('[class*=""]').length != 0);
-			} catch(e){}
+			} catch (e){}
 
 		}
 
@@ -1938,7 +2167,7 @@ local.setDocument = function(document){
 		try {
 			testNode.innerHTML = '<form action="s"><input id="action"/></form>';
 			brokenFormAttributeGetter = (testNode.firstChild.getAttribute('action') != 's');
-		} catch(e){}
+		} catch (e){}
 
 		// native matchesSelector function
 
@@ -1947,7 +2176,7 @@ local.setDocument = function(document){
 			// if matchesSelector trows errors on incorrect sintaxes we can use it
 			features.nativeMatchesSelector.call(root, ':slick');
 			features.nativeMatchesSelector = null;
-		} catch(e){}
+		} catch (e){}
 
 	}
 
@@ -1955,7 +2184,7 @@ local.setDocument = function(document){
 		root.slick_expando = 1;
 		delete root.slick_expando;
 		features.getUID = this.getUIDHTML;
-	} catch(e){
+	} catch (e){
 		features.getUID = this.getUIDXML;
 	}
 
@@ -2019,7 +2248,7 @@ local.setDocument = function(document){
 		bRange.setStart(b, 0);
 		bRange.setEnd(b, 0);
 		return aRange.compareBoundaryPoints(Range.START_TO_END, bRange);
-	} : null ;
+	} : null;
 
 	root = null;
 
@@ -2044,7 +2273,7 @@ local.search = function(context, expression, append, first){
 
 	// setup
 
-	var parsed, i,
+	var parsed, i, node, nodes,
 		uniques = this.uniques = {},
 		hasOthers = !!(append && append.length),
 		contextIsDocument = (context.nodeType == 9);
@@ -2063,8 +2292,7 @@ local.search = function(context, expression, append, first){
 		simpleSelectors: if (simpleSelector){
 
 			var symbol = simpleSelector[1],
-				name = simpleSelector[2],
-				node, nodes;
+				name = simpleSelector[2];
 
 			if (!symbol){
 
@@ -2129,11 +2357,11 @@ local.search = function(context, expression, append, first){
 				|| Slick.disableQSA
 			) break querySelector;
 
-			var _expression = expression, _context = context;
+			var _expression = expression, _context = context, currentId;
 			if (!contextIsDocument){
 				// non-document rooted QSA
 				// credits to Andrew Dupont
-				var currentId = _context.getAttribute('id'), slickid = 'slickid__';
+				currentId = _context.getAttribute('id'), slickid = 'slickid__';
 				_context.setAttribute('id', slickid);
 				_expression = '#' + slickid + ' ' + _expression;
 				context = _context.parentNode;
@@ -2142,7 +2370,7 @@ local.search = function(context, expression, append, first){
 			try {
 				if (first) return context.querySelector(_expression) || null;
 				else nodes = context.querySelectorAll(_expression);
-			} catch(e){
+			} catch (e){
 				qsaFailExpCache[expression] = 1;
 				break querySelector;
 			} finally {
@@ -2341,7 +2569,7 @@ local.matchNode = function(node, selector){
 	if (this.isHTMLDocument && this.nativeMatchesSelector){
 		try {
 			return this.nativeMatchesSelector.call(node, selector.replace(/\[([^=]+)=\s*([^'"\]]+?)\s*\]/g, '[$1="$2"]'));
-		} catch(matchError){}
+		} catch (matchError){}
 	}
 
 	var parsed = this.Slick.parse(selector);
@@ -2807,7 +3035,6 @@ var Element = this.Element = function(tag, props){
 	return document.newElement(tag, props);
 };
 
-
 if (Browser.Element){
 	Element.prototype = Browser.Element.prototype;
 	// IE8 and IE9 require the wrapping.
@@ -2839,7 +3066,7 @@ if (!Browser.Element){
 
 	Element.Prototype = {
 		'$constructor': Element,
-		'$family': Function.from('element').hide()
+		'$family': Function.convert('element').hide()
 	};
 
 	Element.mirror(function(name, method){
@@ -2971,13 +3198,13 @@ var escapeQuotes = function(html){
 /*<ltIE9>*/
 // #2479 - IE8 Cannot set HTML of style element
 var canChangeStyleHTML = (function(){
-    var div = document.createElement('style'),
-        flag = false;
-    try {
-        div.innerHTML = '#justTesing{margin: 0px;}';
-        flag = !!div.innerHTML;
-    } catch(e){}
-    return flag;
+	var div = document.createElement('style'),
+		flag = false;
+	try {
+		div.innerHTML = '#justTesing{margin: 0px;}';
+		flag = !!div.innerHTML;
+	} catch (e){}
+	return flag;
 })();
 /*</ltIE9>*/
 
@@ -3235,7 +3462,7 @@ Object.forEach(properties, function(real, key){
 });
 
 /*<ltIE9>*/
-propertySetters.text = (function(setter){
+propertySetters.text = (function(){
 	return function(node, value){
 		if (node.get('tag') == 'style') node.set('html', value);
 		else node[properties.text] = value;
@@ -3299,7 +3526,7 @@ propertyGetters['class'] = function(node){
 /* <webkit> */
 var el = document.createElement('button');
 // IE sets type as readonly and throws
-try { el.type = 'button'; } catch(e){}
+try { el.type = 'button'; } catch (e){}
 if (el.type != 'button') propertySetters.type = function(node, value){
 	node.setAttribute('type', value);
 };
@@ -3311,13 +3538,13 @@ el = null;
 /*<ltIE9>*/
 // #2479 - IE8 Cannot set HTML of style element
 var canChangeStyleHTML = (function(){
-    var div = document.createElement('style'),
-        flag = false;
-    try {
-        div.innerHTML = '#justTesing{margin: 0px;}';
-        flag = !!div.innerHTML;
-    } catch(e){}
-    return flag;
+	var div = document.createElement('style'),
+		flag = false;
+	try {
+		div.innerHTML = '#justTesing{margin: 0px;}';
+		flag = !!div.innerHTML;
+	} catch (e){}
+	return flag;
 })();
 /*</ltIE9>*/
 
@@ -3333,7 +3560,7 @@ try {
 	input.value = '';
 	input.type = 'email';
 	html5InputSupport = input.type == 'email';
-} catch(e){}
+} catch (e){}
 
 input = null;
 
@@ -3363,9 +3590,9 @@ var hasCloneBug = (function(test){
 var hasClassList = !!document.createElement('div').classList;
 
 var classes = function(className){
-	var classNames = (className || '').clean().split(" "), uniques = {};
+	var classNames = (className || '').clean().split(' '), uniques = {};
 	return classNames.filter(function(className){
-		if (className !== "" && !uniques[className]) return uniques[className] = className;
+		if (className !== '' && !uniques[className]) return uniques[className] = className;
 	});
 };
 
@@ -3429,7 +3656,7 @@ Element.implement({
 	},
 
 	getProperties: function(){
-		var args = Array.from(arguments);
+		var args = Array.convert(arguments);
 		return args.map(this.getProperty, this).associate(args);
 	},
 
@@ -3528,7 +3755,7 @@ Element.implement({
 
 	getSelected: function(){
 		this.selectedIndex; // Safari 3.2.1
-		return new Elements(Array.from(this.options).filter(function(option){
+		return new Elements(Array.convert(this.options).filter(function(option){
 			return option.selected;
 		}));
 	},
@@ -3544,7 +3771,7 @@ Element.implement({
 				return document.id(opt).get('value');
 			}) : ((type == 'radio' || type == 'checkbox') && !el.checked) ? null : el.get('value');
 
-			Array.from(value).each(function(val){
+			Array.convert(value).each(function(val){
 				if (typeof val != 'undefined') queryString.push(encodeURIComponent(el.name) + '=' + encodeURIComponent(val));
 			});
 		});
@@ -3552,7 +3779,6 @@ Element.implement({
 	}
 
 });
-
 
 // appendHTML
 
@@ -3613,7 +3839,7 @@ Element.implement({
 	},
 
 	empty: function(){
-		Array.from(this.childNodes).each(Element.dispose);
+		Array.convert(this.childNodes).each(Element.dispose);
 		return this;
 	},
 
@@ -3626,8 +3852,8 @@ Element.implement({
 		var clone = this.cloneNode(contents), ce = [clone], te = [this], i;
 
 		if (contents){
-			ce.append(Array.from(clone.getElementsByTagName('*')));
-			te.append(Array.from(this.getElementsByTagName('*')));
+			ce.append(Array.convert(clone.getElementsByTagName('*')));
+			te.append(Array.convert(this.getElementsByTagName('*')));
 		}
 
 		for (i = ce.length; i--;){
@@ -3754,11 +3980,12 @@ var supportsHTML5Elements = true, supportsTableInnerHTML = true, supportsTRInner
 /*<ltIE9>*/
 // technique by jdbarlett - http://jdbartlett.com/innershiv/
 var div = document.createElement('div');
+var fragment;
 div.innerHTML = '<nav></nav>';
 supportsHTML5Elements = (div.childNodes.length == 1);
 if (!supportsHTML5Elements){
-	var tags = 'abbr article aside audio canvas datalist details figcaption figure footer header hgroup mark meter nav output progress section summary time video'.split(' '),
-		fragment = document.createDocumentFragment(), l = tags.length;
+	var tags = 'abbr article aside audio canvas datalist details figcaption figure footer header hgroup mark meter nav output progress section summary time video'.split(' ');
+	fragment = document.createDocumentFragment(), l = tags.length;
 	while (l--) fragment.createElement(tags[l]);
 }
 div = null;
@@ -3955,7 +4182,7 @@ var floatName = (html.style.cssFloat == null) ? 'styleFloat' : 'cssFloat',
 
 var camelCase = function(property){
 	return property.replace(prefixPattern, '$1-').camelCase();
-}
+};
 
 //<ltIE9>
 var removeStyle = function(style, property){
@@ -3985,7 +4212,7 @@ Element.implement({
 		property = camelCase(property == 'float' ? floatName : property);
 		if (typeOf(value) != 'string'){
 			var map = (Element.Styles[property] || '@').split(' ');
-			value = Array.from(value).map(function(val, i){
+			value = Array.convert(value).map(function(val, i){
 				if (!map[i]) return '';
 				return (typeOf(val) == 'number') ? map[i].replace('@', Math.round(val)) : val;
 			}).join(' ');
@@ -4137,7 +4364,7 @@ Element.Properties.events = {set: function(events){
 					return true;
 				};
 			}
-			if (custom.base) realType = Function.from(custom.base).call(this, type);
+			if (custom.base) realType = Function.convert(custom.base).call(this, type);
 		}
 		var defn = function(){
 			return fn.call(self);
@@ -4168,7 +4395,7 @@ Element.Properties.events = {set: function(events){
 		var custom = Element.Events[type];
 		if (custom){
 			if (custom.onRemove) custom.onRemove.call(this, fn, type);
-			if (custom.base) type = Function.from(custom.base).call(this, type);
+			if (custom.base) type = Function.convert(custom.base).call(this, type);
 		}
 		return (Element.NativeEvents[type]) ? this.removeListener(type, value, arguments[2]) : this;
 	},
@@ -4201,7 +4428,7 @@ Element.Properties.events = {set: function(events){
 	fireEvent: function(type, args, delay){
 		var events = this.retrieve('events');
 		if (!events || !events[type]) return this;
-		args = Array.from(args);
+		args = Array.convert(args);
 
 		events[type].keys.each(function(fn){
 			if (delay) fn.delay(delay, this, args);
@@ -4571,7 +4798,7 @@ Element.implement({
 		try {
 			var bounds = this.getBoundingClientRect();
 			return {x: bounds.width, y: bounds.height};
-		} catch(e) {
+		} catch (e){
 			return {x: 0, y: 0};
 		}
 	},
@@ -4611,14 +4838,14 @@ Element.implement({
 
 		try {
 			return element.offsetParent;
-		} catch(e){}
+		} catch (e){}
 		return null;
 	},
 
 	getOffsets: function(){
 		var hasGetBoundingClientRect = this.getBoundingClientRect;
 //<1.4compat>
-		hasGetBoundingClientRect = hasGetBoundingClientRect && !Browser.Platform.ios
+		hasGetBoundingClientRect = hasGetBoundingClientRect && !Browser.Platform.ios;
 //</1.4compat>
 		if (hasGetBoundingClientRect){
 			var bound = this.getBoundingClientRect(),
@@ -4708,7 +4935,6 @@ Element.implement({
 	}
 
 });
-
 
 [Document, Window].invoke('implement', {
 
@@ -4822,7 +5048,7 @@ description: Contains the basic animation logic to be extended by all other Fx C
 
 license: MIT-style license.
 
-requires: [Chain, Events, Options]
+requires: [Chain, Events, Options, Class.Thenable]
 
 provides: Fx
 
@@ -4833,7 +5059,7 @@ provides: Fx
 
 var Fx = this.Fx = new Class({
 
-	Implements: [Chain, Events, Options],
+	Implements: [Chain, Events, Options, Class.Thenable],
 
 	options: {
 		/*
@@ -4907,6 +5133,9 @@ var Fx = this.Fx = new Class({
 		this.duration = Fx.Durations[duration] || duration.toInt();
 		this.frameInterval = 1000 / fps;
 		this.frames = frames || Math.round(this.duration / this.frameInterval);
+		if (this.getThenableState() !== 'pending'){
+			this.resetThenable(this.subject);
+		}
 		this.fireEvent('start', this.subject);
 		pushInstance.call(this, fps);
 		return this;
@@ -4922,6 +5151,7 @@ var Fx = this.Fx = new Class({
 			} else {
 				this.fireEvent('stop', this.subject);
 			}
+			this.resolve(this.subject === this ? null : this.subject);
 		}
 		return this;
 	},
@@ -4932,6 +5162,7 @@ var Fx = this.Fx = new Class({
 			pullInstance.call(this, this.options.fps);
 			this.frame = this.frames;
 			this.fireEvent('cancel', this.subject).clearChain();
+			this.reject(this.subject);
 		}
 		return this;
 	},
@@ -5020,7 +5251,7 @@ Fx.CSS = new Class({
 	//prepares the base from/to object
 
 	prepare: function(element, property, values){
-		values = Array.from(values);
+		values = Array.convert(values);
 		var from = values[0], to = values[1];
 		if (to == null){
 			to = from;
@@ -5051,12 +5282,12 @@ Fx.CSS = new Class({
 	//parses a value into an array
 
 	parse: function(value){
-		value = Function.from(value)();
-		value = (typeof value == 'string') ? value.split(' ') : Array.from(value);
+		value = Function.convert(value)();
+		value = (typeof value == 'string') ? value.split(' ') : Array.convert(value);
 		return value.map(function(val){
 			val = String(val);
 			var found = false;
-			Object.each(Fx.CSS.Parsers, function(parser, key){
+			Object.each(Fx.CSS.Parsers, function(parser){
 				if (found) return;
 				var parsed = parser.parse(val);
 				if (parsed || parsed === 0) found = {value: parsed, parser: parser};
@@ -5073,7 +5304,7 @@ Fx.CSS = new Class({
 		(Math.min(from.length, to.length)).times(function(i){
 			computed.push({value: from[i].parser.compute(from[i].value, to[i].value, delta), parser: from[i].parser});
 		});
-		computed.$family = Function.from('fx:css:value');
+		computed.$family = Function.convert('fx:css:value');
 		return computed;
 	},
 
@@ -5101,7 +5332,7 @@ Fx.CSS = new Class({
 		var to = {}, selectorTest = new RegExp('^' + selector.escapeRegExp() + '$');
 
 		var searchStyles = function(rules){
-			Array.each(rules, function(rule, i){
+			Array.each(rules, function(rule){
 				if (rule.media){
 					searchStyles(rule.rules || rule.cssRules);
 					return;
@@ -5119,7 +5350,7 @@ Fx.CSS = new Class({
 			});
 		};
 
-		Array.each(document.styleSheets, function(sheet, j){
+		Array.each(document.styleSheets, function(sheet){
 			var href = sheet.href;
 			if (href && href.indexOf('://') > -1 && href.indexOf(document.domain) == -1) return;
 			var rules = sheet.rules || sheet.cssRules;
@@ -5158,7 +5389,7 @@ Fx.CSS.Parsers = {
 	},
 
 	String: {
-		parse: Function.from(false),
+		parse: Function.convert(false),
 		compute: function(zero, one){
 			return one;
 		},
@@ -5238,7 +5469,7 @@ Element.implement({
 		return this;
 	},
 
-	fade: function(how){
+	fade: function(){
 		var fade = this.get('tween'), method, args = ['opacity'].append(arguments), toggle;
 		if (args[1] == null) args[1] = 'toggle';
 		switch (args[1]){
@@ -5252,7 +5483,7 @@ Element.implement({
 				args[1] = flag ? 0 : 1;
 				this.store('fade:flag', !flag);
 				toggle = true;
-			break;
+				break;
 			default: method = 'start';
 		}
 		if (!toggle) this.eliminate('fade:flag');
@@ -5409,7 +5640,7 @@ Fx.implement({
 });
 
 Fx.Transition = function(transition, params){
-	params = Array.from(params);
+	params = Array.convert(params);
 	var easeIn = function(pos){
 		return transition(pos, params);
 	};
@@ -5491,7 +5722,7 @@ description: Powerful all purpose Request Class. Uses XMLHTTPRequest.
 
 license: MIT-style license.
 
-requires: [Object, Element, Chain, Events, Options, Browser]
+requires: [Object, Element, Chain, Events, Options, Class.Thenable, Browser]
 
 provides: Request
 
@@ -5505,7 +5736,7 @@ var empty = function(){},
 
 var Request = this.Request = new Class({
 
-	Implements: [Chain, Events, Options],
+	Implements: [Chain, Events, Options, Class.Thenable],
 
 	options: {/*
 		onRequest: function(){},
@@ -5585,6 +5816,7 @@ var Request = this.Request = new Class({
 
 	success: function(text, xml){
 		this.onSuccess(this.processScripts(text), xml);
+		this.resolve({text: text, xml: xml});
 	},
 
 	onSuccess: function(){
@@ -5593,6 +5825,7 @@ var Request = this.Request = new Class({
 
 	failure: function(){
 		this.onFailure();
+		this.reject({reason: 'failure', xhr: this.xhr});
 	},
 
 	onFailure: function(){
@@ -5609,6 +5842,7 @@ var Request = this.Request = new Class({
 
 	timeout: function(){
 		this.fireEvent('timeout', this.xhr);
+		this.reject({reason: 'timeout', xhr: this.xhr});
 	},
 
 	setHeader: function(name, value){
@@ -5694,9 +5928,13 @@ var Request = this.Request = new Class({
 				xhr.setRequestHeader(key, value);
 			} catch (e){
 				this.fireEvent('exception', [key, value]);
+				this.reject({reason: 'exception', xhr: xhr, exception: e});
 			}
 		}, this);
 
+		if (this.getThenableState() !== 'pending'){
+			this.resetThenable({reason: 'send'});
+		}
 		this.fireEvent('request');
 		xhr.send(data);
 		if (!this.options.async) this.onStateChange();
@@ -5717,6 +5955,7 @@ var Request = this.Request = new Class({
 		if (progressSupport) xhr.onprogress = xhr.onloadstart = empty;
 		this.xhr = new Browser.Request();
 		this.fireEvent('cancel');
+		this.reject({reason: 'cancel', xhr: xhr});
 		return this;
 	}
 
@@ -5825,6 +6064,7 @@ Request.HTML = new Class({
 		if (options.evalScripts) Browser.exec(response.javascript);
 
 		this.onSuccess(response.tree, response.elements, response.html, response.javascript);
+		this.resolve({tree: response.tree, elements: response.elements, html: response.html, javascript: response.javascript});
 	}
 
 });
@@ -5977,8 +6217,12 @@ Request.JSON = new Class({
 			this.fireEvent('error', [text, error]);
 			return;
 		}
-		if (json == null) this.onFailure();
-		else this.onSuccess(json, text);
+		if (json == null){
+			this.failure();
+		} else {
+			this.onSuccess(json, text);
+			this.resolve({json: json, text: text});
+		}
 	}
 
 });
@@ -6087,7 +6331,7 @@ var ready,
 
 var domready = function(){
 	clearTimeout(timer);
-	if (!ready) {
+	if (!ready){
 		Browser.loaded = ready = true;
 		document.removeListener('DOMContentLoaded', domready).removeListener('readystatechange', check);
 		document.fireEvent('domready');

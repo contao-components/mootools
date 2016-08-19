@@ -3,7 +3,7 @@
 MooTools: the javascript framework
 
 web build:
- - http://mootools.net/more/c619d3650feb28db08dc541badaf43d5
+ - http://mootools.net/more/builder/8cfff4ee9517a6a5d2b33b380a2111fa
 
 packager build:
  - packager build More/More More/Class.Refactor More/Class.Binds More/Class.Occlude More/Chain.Wait More/Array.Extras More/Date More/Date.Extras More/String.Extras More/String.QueryString More/URI More/URI.Relative More/Hash.Extras More/Elements.From More/Element.Measure More/Element.Position More/Element.Shortcuts More/Form.Request More/Form.Request.Append More/OverText More/Fx.Elements More/Fx.Accordion More/Fx.Scroll More/Fx.Slide More/Fx.SmoothScroll More/Fx.Sort More/Drag More/Drag.Move More/Sortables More/Assets More/Color More/Hash.Cookie More/Swiff More/Keyboard More/Keyboard.Extras More/Scroller More/Tips More/Locale
@@ -41,8 +41,8 @@ provides: [MooTools.More]
 */
 
 MooTools.More = {
-	version: '1.5.2',
-	build: 'facdf0458d10fd214aa9f5fa71935a23a772cc48'
+	version: '1.6.0',
+	build: '45b71db70f879781a7e0b0d3fb3bb1307c2521eb'
 };
 
 /*
@@ -112,12 +112,12 @@ provides: [Class.Binds]
 
 Class.Mutators.Binds = function(binds){
 	if (!this.prototype.initialize) this.implement('initialize', function(){});
-	return Array.from(binds).concat(this.prototype.Binds || []);
+	return Array.convert(binds).concat(this.prototype.Binds || []);
 };
 
 Class.Mutators.initialize = function(initialize){
 	return function(){
-		Array.from(this.Binds).each(function(name){
+		Array.convert(this.Binds).each(function(name){
 			var original = this[name];
 			if (original) this[name] = original.bind(this);
 		}, this);
@@ -191,40 +191,40 @@ provides: [Chain.Wait]
 
 (function(){
 
-	var wait = {
-		wait: function(duration){
-			return this.chain(function(){
-				this.callChain.delay(duration == null ? 500 : duration, this);
-				return this;
-			}.bind(this));
-		}
-	};
-
-	Chain.implement(wait);
-
-	if (this.Fx) Fx.implement(wait);
-
-	if (this.Element && Element.implement && this.Fx){
-		Element.implement({
-
-			chains: function(effects){
-				Array.from(effects || ['tween', 'morph', 'reveal']).each(function(effect){
-					effect = this.get(effect);
-					if (!effect) return;
-					effect.setOptions({
-						link:'chain'
-					});
-				}, this);
-				return this;
-			},
-
-			pauseFx: function(duration, effect){
-				this.chains(effect).get(effect || 'tween').wait(duration);
-				return this;
-			}
-
-		});
+var wait = {
+	wait: function(duration){
+		return this.chain(function(){
+			this.callChain.delay(duration == null ? 500 : duration, this);
+			return this;
+		}.bind(this));
 	}
+};
+
+Chain.implement(wait);
+
+if (this.Fx) Fx.implement(wait);
+
+if (this.Element && Element.implement && this.Fx){
+	Element.implement({
+
+		chains: function(effects){
+			Array.convert(effects || ['tween', 'morph', 'reveal']).each(function(effect){
+				effect = this.get(effect);
+				if (!effect) return;
+				effect.setOptions({
+					link:'chain'
+				});
+			}, this);
+			return this;
+		},
+
+		pauseFx: function(duration, effect){
+			this.chains(effect).get(effect || 'tween').wait(duration);
+			return this;
+		}
+
+	});
+}
 
 })();
 
@@ -504,7 +504,7 @@ Locale.Set = new Class({
 		var value = Object.getFromPath(this.sets, key);
 		if (value != null){
 			var type = typeOf(value);
-			if (type == 'function') value = value.apply(null, Array.from(args));
+			if (type == 'function') value = value.apply(null, Array.convert(args));
 			else if (type == 'object') value = Object.clone(value);
 			return value;
 		}
@@ -530,7 +530,7 @@ Locale.Set = new Class({
 	},
 
 	inherit: function(names, set){
-		names = Array.from(names);
+		names = Array.convert(names);
 
 		if (set && !this.inherits.sets[set]) this.inherits.sets[set] = [];
 
@@ -658,9 +658,11 @@ var DateMethods = Date.Methods = {
 	hr: 'Hours'
 };
 
-['Date', 'Day', 'FullYear', 'Hours', 'Milliseconds', 'Minutes', 'Month', 'Seconds', 'Time', 'TimezoneOffset',
+[
+	'Date', 'Day', 'FullYear', 'Hours', 'Milliseconds', 'Minutes', 'Month', 'Seconds', 'Time', 'TimezoneOffset',
 	'Week', 'Timezone', 'GMTOffset', 'DayOfYear', 'LastMonth', 'LastDayOfMonth', 'UTCDate', 'UTCDay', 'UTCFullYear',
-	'AMPM', 'Ordinal', 'UTCHours', 'UTCMilliseconds', 'UTCMinutes', 'UTCMonth', 'UTCSeconds', 'UTCMilliseconds'].each(function(method){
+	'AMPM', 'Ordinal', 'UTCHours', 'UTCMilliseconds', 'UTCMinutes', 'UTCMonth', 'UTCSeconds', 'UTCMilliseconds'
+].each(function(method){
 	Date.Methods[method.toLowerCase()] = method;
 });
 
@@ -946,12 +948,12 @@ Date.extend({
 	},
 
 	units: {
-		ms: Function.from(1),
-		second: Function.from(1000),
-		minute: Function.from(60000),
-		hour: Function.from(3600000),
-		day: Function.from(86400000),
-		week: Function.from(608400000),
+		ms: Function.convert(1),
+		second: Function.convert(1000),
+		minute: Function.convert(60000),
+		hour: Function.convert(3600000),
+		day: Function.convert(86400000),
+		week: Function.convert(608400000),
 		month: function(month, year){
 			var d = new Date;
 			return Date.daysInMonth(month != null ? month : d.get('mo'), year != null ? year : d.get('year')) * 86400000;
@@ -1093,13 +1095,13 @@ var build = function(format){
 
 	var parsed = [];
 	var re = (format.source || format) // allow format to be regex
-	 .replace(/%([a-z])/gi,
+	.replace(/%([a-z])/gi,
 		function($0, $1){
 			return replacers($1) || $0;
 		}
 	).replace(/\((?!\?)/g, '(?:') // make all groups non-capturing
-	 .replace(/ (?!\?|\*)/g, ',? ') // be forgiving with spaces and commas
-	 .replace(/%([a-z%])/gi,
+	.replace(/ (?!\?|\*)/g, ',? ') // be forgiving with spaces and commas
+	.replace(/%([a-z%])/gi,
 		function($0, $1){
 			var p = keys[$1];
 			if (!p) return $1;
@@ -1321,66 +1323,66 @@ provides: [String.Extras]
 (function(){
 
 var special = {
-	'a': /[àáâãäåăą]/g,
-	'A': /[ÀÁÂÃÄÅĂĄ]/g,
-	'c': /[ćčç]/g,
-	'C': /[ĆČÇ]/g,
-	'd': /[ďđ]/g,
-	'D': /[ĎÐ]/g,
-	'e': /[èéêëěę]/g,
-	'E': /[ÈÉÊËĚĘ]/g,
-	'g': /[ğ]/g,
-	'G': /[Ğ]/g,
-	'i': /[ìíîï]/g,
-	'I': /[ÌÍÎÏ]/g,
-	'l': /[ĺľł]/g,
-	'L': /[ĹĽŁ]/g,
-	'n': /[ñňń]/g,
-	'N': /[ÑŇŃ]/g,
-	'o': /[òóôõöøő]/g,
-	'O': /[ÒÓÔÕÖØ]/g,
-	'r': /[řŕ]/g,
-	'R': /[ŘŔ]/g,
-	's': /[ššş]/g,
-	'S': /[ŠŞŚ]/g,
-	't': /[ťţ]/g,
-	'T': /[ŤŢ]/g,
-	'u': /[ùúûůüµ]/g,
-	'U': /[ÙÚÛŮÜ]/g,
-	'y': /[ÿý]/g,
-	'Y': /[ŸÝ]/g,
-	'z': /[žźż]/g,
-	'Z': /[ŽŹŻ]/g,
-	'th': /[þ]/g,
-	'TH': /[Þ]/g,
-	'dh': /[ð]/g,
-	'DH': /[Ð]/g,
-	'ss': /[ß]/g,
-	'oe': /[œ]/g,
-	'OE': /[Œ]/g,
-	'ae': /[æ]/g,
-	'AE': /[Æ]/g
-},
+		'a': /[àáâãäåăą]/g,
+		'A': /[ÀÁÂÃÄÅĂĄ]/g,
+		'c': /[ćčç]/g,
+		'C': /[ĆČÇ]/g,
+		'd': /[ďđ]/g,
+		'D': /[ĎÐ]/g,
+		'e': /[èéêëěę]/g,
+		'E': /[ÈÉÊËĚĘ]/g,
+		'g': /[ğ]/g,
+		'G': /[Ğ]/g,
+		'i': /[ìíîï]/g,
+		'I': /[ÌÍÎÏ]/g,
+		'l': /[ĺľł]/g,
+		'L': /[ĹĽŁ]/g,
+		'n': /[ñňń]/g,
+		'N': /[ÑŇŃ]/g,
+		'o': /[òóôõöøő]/g,
+		'O': /[ÒÓÔÕÖØ]/g,
+		'r': /[řŕ]/g,
+		'R': /[ŘŔ]/g,
+		's': /[ššş]/g,
+		'S': /[ŠŞŚ]/g,
+		't': /[ťţ]/g,
+		'T': /[ŤŢ]/g,
+		'u': /[ùúûůüµ]/g,
+		'U': /[ÙÚÛŮÜ]/g,
+		'y': /[ÿý]/g,
+		'Y': /[ŸÝ]/g,
+		'z': /[žźż]/g,
+		'Z': /[ŽŹŻ]/g,
+		'th': /[þ]/g,
+		'TH': /[Þ]/g,
+		'dh': /[ð]/g,
+		'DH': /[Ð]/g,
+		'ss': /[ß]/g,
+		'oe': /[œ]/g,
+		'OE': /[Œ]/g,
+		'ae': /[æ]/g,
+		'AE': /[Æ]/g
+	},
 
-tidy = {
-	' ': /[\xa0\u2002\u2003\u2009]/g,
-	'*': /[\xb7]/g,
-	'\'': /[\u2018\u2019]/g,
-	'"': /[\u201c\u201d]/g,
-	'...': /[\u2026]/g,
-	'-': /[\u2013]/g,
-//	'--': /[\u2014]/g,
-	'&raquo;': /[\uFFFD]/g
-},
+	tidy = {
+		' ': /[\xa0\u2002\u2003\u2009]/g,
+		'*': /[\xb7]/g,
+		'\'': /[\u2018\u2019]/g,
+		'"': /[\u201c\u201d]/g,
+		'...': /[\u2026]/g,
+		'-': /[\u2013]/g,
+	//	'--': /[\u2014]/g,
+		'&raquo;': /[\uFFFD]/g
+	},
 
-conversions = {
-	ms: 1,
-	s: 1000,
-	m: 6e4,
-	h: 36e5
-},
+	conversions = {
+		ms: 1,
+		s: 1000,
+		m: 6e4,
+		h: 36e5
+	},
 
-findUnits = /(\d*.?\d+)([msh]+)/;
+	findUnits = /(\d*.?\d+)([msh]+)/;
 
 var walk = function(string, replacements){
 	var result = string, key;
@@ -1389,9 +1391,9 @@ var walk = function(string, replacements){
 };
 
 var getRegexForTag = function(tag, contents){
-	tag = tag || '';
-	var regstr = contents ? "<" + tag + "(?!\\w)[^>]*>([\\s\\S]*?)<\/" + tag + "(?!\\w)>" : "<\/?" + tag + "([^>]+)?>";
-	return new RegExp(regstr, "gi");
+	tag = tag || (contents ? '' : '\\w+');
+	var regstr = contents ? '<' + tag + '(?!\\w)[^>]*>([\\s\\S]*?)<\/' + tag + '(?!\\w)>' : '<\/?' + tag + '\/?>|<' + tag + '[\\s|\/][^>]*>';
+	return new RegExp(regstr, 'gi');
 };
 
 String.implement({
@@ -1444,7 +1446,7 @@ String.implement({
 	},
 
 	ms: function(){
-	  // "Borrowed" from https://gist.github.com/1503944
+		// "Borrowed" from https://gist.github.com/1503944
 		var units = findUnits.exec(this);
 		if (units == null) return Number(this);
 		return Number(units[1]) * conversions[units[2]];
@@ -1582,7 +1584,7 @@ var URI = this.URI = new Class({
 		/*base: false*/
 	},
 
-	regex: /^(?:(\w+):)?(?:\/\/(?:(?:([^:@\/]*):?([^:@\/]*))?@)?([^:\/?#]*)(?::(\d*))?)?(\.\.?$|(?:[^?#\/]*\/)*)([^?#]*)(?:\?([^#]*))?(?:#(.*))?/,
+	regex: /^(?:(\w+):)?(?:\/\/(?:(?:([^:@\/]*):?([^:@\/]*))?@)?(\[[A-Fa-f0-9:]+\]|[^:\/?#]*)(?::(\d*))?)?(\.\.?$|(?:[^?#\/]*\/)*)([^?#]*)(?:\?([^#]*))?(?:#(.*))?/,
 	parts: ['scheme', 'user', 'password', 'host', 'port', 'directory', 'file', 'query', 'fragment'],
 	schemes: {http: 80, https: 443, ftp: 21, rtsp: 554, mms: 1755, file: 0},
 
@@ -1699,7 +1701,7 @@ URI.regs = {
 	directoryDot: /\.\/|\.$/
 };
 
-URI.base = new URI(Array.from(document.getElements('base[href]', true)).getLast(), {base: document.location});
+URI.base = new URI(Array.convert(document.getElements('base[href]', true)).getLast(), {base: document.location});
 
 String.implement({
 
@@ -1724,7 +1726,6 @@ license: MIT-style license
 
 authors:
   - Sebastian Markbåge
-
 
 requires:
   - Class.refactor
@@ -1911,7 +1912,6 @@ Hash.implement({
 
 Hash.alias({indexOf: 'keyOf', contains: 'hasValue'});
 
-
 })();
 
 /*
@@ -2046,7 +2046,6 @@ var isVisible = function(el){
 	return !!(!el || el.offsetHeight || el.offsetWidth);
 };
 
-
 Element.implement({
 
 	measure: function(fn){
@@ -2096,17 +2095,16 @@ Element.implement({
 		} else if (parent){
 			try { //safari sometimes crashes here, so catch it
 				dim = getSize(this, options);
-			}catch(e){}
+			} catch (e){}
 		}
 
 		return Object.append(dim, (dim.x || dim.x === 0) ? {
-				width: dim.x,
-				height: dim.y
-			} : {
-				x: dim.width,
-				y: dim.height
-			}
-		);
+			width: dim.x,
+			height: dim.y
+		} : {
+			x: dim.width,
+			y: dim.height
+		});
 	},
 
 	getComputedSize: function(options){
@@ -2294,13 +2292,13 @@ var local = Element.Position = {
 			left = calc.x,
 			winSize = window.getSize();
 
-		switch(options.position.x){
+		switch (options.position.x){
 			case 'left': position.x = left + offsetX; break;
 			case 'right': position.x = left + offsetX + relativeTo.offsetWidth; break;
 			default: position.x = left + ((relativeTo == document.body ? winSize.x : relativeTo.offsetWidth) / 2) + offsetX; break;
 		}
 
-		switch(options.position.y){
+		switch (options.position.y){
 			case 'top': position.y = top + offsetY; break;
 			case 'bottom': position.y = top + offsetY + relativeTo.offsetHeight; break;
 			default: position.y = top + ((relativeTo == document.body ? winSize.y : relativeTo.offsetHeight) / 2) + offsetY; break;
@@ -2348,14 +2346,14 @@ var local = Element.Position = {
 			dimensions = options.dimensions,
 			edge = options.edge;
 
-		switch(edge.x){
+		switch (edge.x){
 			case 'left': edgeOffset.x = 0; break;
 			case 'right': edgeOffset.x = -dimensions.x - dimensions.computedRight - dimensions.computedLeft; break;
 			// center
 			default: edgeOffset.x = -(Math.round(dimensions.totalWidth / 2)); break;
 		}
 
-		switch(edge.y){
+		switch (edge.y){
 			case 'top': edgeOffset.y = 0; break;
 			case 'bottom': edgeOffset.y = -dimensions.y - dimensions.computedTop - dimensions.computedBottom; break;
 			// center
@@ -2442,7 +2440,7 @@ Element.implement({
 		try {
 			//IE fails here if the element is not in the dom
 			d = this.getStyle('display');
-		} catch(e){}
+		} catch (e){}
 		if (d == 'none') return this;
 		return this.store('element:_originalDisplay', d || '').setStyle('display', 'none');
 	},
@@ -2469,7 +2467,7 @@ Document.implement({
 			try {
 				//IE fails here if selected element is not in dom
 				document.selection.empty();
-			} catch(e){}
+			} catch (e){}
 		}
 	}
 
@@ -2565,7 +2563,7 @@ var IframeShim = this.IframeShim = new Class({
 			if (!IframeShim.ready) window.addEvent('load', inject);
 			else inject();
 		} else {
-			this.position = this.hide = this.show = this.dispose = Function.from(this);
+			this.position = this.hide = this.show = this.dispose = Function.convert(this);
 		}
 	},
 
@@ -3280,176 +3278,176 @@ if (!window.Form) window.Form = {};
 
 (function(){
 
-	Form.Request = new Class({
+Form.Request = new Class({
 
-		Binds: ['onSubmit', 'onFormValidate'],
+	Binds: ['onSubmit', 'onFormValidate'],
 
-		Implements: [Options, Events, Class.Occlude],
+	Implements: [Options, Events, Class.Occlude],
 
-		options: {/*
-			onFailure: function(){},
-			onSuccess: function(){}, // aliased to onComplete,
-			onSend: function(){}*/
-			requestOptions: {
-				evalScripts: true,
-				useSpinner: true,
-				emulation: false,
-				link: 'ignore'
-			},
-			sendButtonClicked: true,
-			extraData: {},
-			resetForm: true
+	options: {/*
+		onFailure: function(){},
+		onSuccess: function(){}, // aliased to onComplete,
+		onSend: function(){}*/
+		requestOptions: {
+			evalScripts: true,
+			useSpinner: true,
+			emulation: false,
+			link: 'ignore'
 		},
+		sendButtonClicked: true,
+		extraData: {},
+		resetForm: true
+	},
 
-		property: 'form.request',
+	property: 'form.request',
 
-		initialize: function(form, target, options){
-			this.element = document.id(form);
-			if (this.occlude()) return this.occluded;
-			this.setOptions(options)
-				.setTarget(target)
-				.attach();
-		},
+	initialize: function(form, target, options){
+		this.element = document.id(form);
+		if (this.occlude()) return this.occluded;
+		this.setOptions(options)
+			.setTarget(target)
+			.attach();
+	},
 
-		setTarget: function(target){
-			this.target = document.id(target);
-			if (!this.request){
-				this.makeRequest();
-			} else {
-				this.request.setOptions({
-					update: this.target
-				});
-			}
-			return this;
-		},
-
-		toElement: function(){
-			return this.element;
-		},
-
-		makeRequest: function(){
-			var self = this;
-			this.request = new Request.HTML(Object.merge({
-					update: this.target,
-					emulation: false,
-					spinnerTarget: this.element,
-					method: this.element.get('method') || 'post'
-			}, this.options.requestOptions)).addEvents({
-				success: function(tree, elements, html, javascript){
-					['complete', 'success'].each(function(evt){
-						self.fireEvent(evt, [self.target, tree, elements, html, javascript]);
-					});
-				},
-				failure: function(){
-					self.fireEvent('complete', arguments).fireEvent('failure', arguments);
-				},
-				exception: function(){
-					self.fireEvent('failure', arguments);
-				}
-			});
-			return this.attachReset();
-		},
-
-		attachReset: function(){
-			if (!this.options.resetForm) return this;
-			this.request.addEvent('success', function(){
-				Function.attempt(function(){
-					this.element.reset();
-				}.bind(this));
-				if (window.OverText) OverText.update();
-			}.bind(this));
-			return this;
-		},
-
-		attach: function(attach){
-			var method = (attach != false) ? 'addEvent' : 'removeEvent';
-			this.element[method]('click:relay(button, input[type=submit])', this.saveClickedButton.bind(this));
-
-			var fv = this.element.retrieve('validator');
-			if (fv) fv[method]('onFormValidate', this.onFormValidate);
-			else this.element[method]('submit', this.onSubmit);
-
-			return this;
-		},
-
-		detach: function(){
-			return this.attach(false);
-		},
-
-		//public method
-		enable: function(){
-			return this.attach();
-		},
-
-		//public method
-		disable: function(){
-			return this.detach();
-		},
-
-		onFormValidate: function(valid, form, event){
-			//if there's no event, then this wasn't a submit event
-			if (!event) return;
-			var fv = this.element.retrieve('validator');
-			if (valid || (fv && !fv.options.stopOnFailure)){
-				event.stop();
-				this.send();
-			}
-		},
-
-		onSubmit: function(event){
-			var fv = this.element.retrieve('validator');
-			if (fv){
-				//form validator was created after Form.Request
-				this.element.removeEvent('submit', this.onSubmit);
-				fv.addEvent('onFormValidate', this.onFormValidate);
-				fv.validate(event);
-				return;
-			}
-			if (event) event.stop();
-			this.send();
-		},
-
-		saveClickedButton: function(event, target){
-			var targetName = target.get('name');
-			if (!targetName || !this.options.sendButtonClicked) return;
-			this.options.extraData[targetName] = target.get('value') || true;
-			this.clickedCleaner = function(){
-				delete this.options.extraData[targetName];
-				this.clickedCleaner = function(){};
-			}.bind(this);
-		},
-
-		clickedCleaner: function(){},
-
-		send: function(){
-			var str = this.element.toQueryString().trim(),
-				data = Object.toQueryString(this.options.extraData);
-
-			if (str) str += "&" + data;
-			else str = data;
-
-			this.fireEvent('send', [this.element, str.parseQueryString()]);
-			this.request.send({
-				data: str,
-				url: this.options.requestOptions.url || this.element.get('action')
-			});
-			this.clickedCleaner();
-			return this;
-		}
-
-	});
-
-	Element.implement('formUpdate', function(update, options){
-		var fq = this.retrieve('form.request');
-		if (!fq){
-			fq = new Form.Request(this, update, options);
+	setTarget: function(target){
+		this.target = document.id(target);
+		if (!this.request){
+			this.makeRequest();
 		} else {
-			if (update) fq.setTarget(update);
-			if (options) fq.setOptions(options).makeRequest();
+			this.request.setOptions({
+				update: this.target
+			});
 		}
-		fq.send();
 		return this;
-	});
+	},
+
+	toElement: function(){
+		return this.element;
+	},
+
+	makeRequest: function(){
+		var self = this;
+		this.request = new Request.HTML(Object.merge({
+			update: this.target,
+			emulation: false,
+			spinnerTarget: this.element,
+			method: this.element.get('method') || 'post'
+		}, this.options.requestOptions)).addEvents({
+			success: function(tree, elements, html, javascript){
+				['complete', 'success'].each(function(evt){
+					self.fireEvent(evt, [self.target, tree, elements, html, javascript]);
+				});
+			},
+			failure: function(){
+				self.fireEvent('complete', arguments).fireEvent('failure', arguments);
+			},
+			exception: function(){
+				self.fireEvent('failure', arguments);
+			}
+		});
+		return this.attachReset();
+	},
+
+	attachReset: function(){
+		if (!this.options.resetForm) return this;
+		this.request.addEvent('success', function(){
+			Function.attempt(function(){
+				this.element.reset();
+			}.bind(this));
+			if (window.OverText) OverText.update();
+		}.bind(this));
+		return this;
+	},
+
+	attach: function(attach){
+		var method = (attach != false) ? 'addEvent' : 'removeEvent';
+		this.element[method]('click:relay(button, input[type=submit])', this.saveClickedButton.bind(this));
+
+		var fv = this.element.retrieve('validator');
+		if (fv) fv[method]('onFormValidate', this.onFormValidate);
+		else this.element[method]('submit', this.onSubmit);
+
+		return this;
+	},
+
+	detach: function(){
+		return this.attach(false);
+	},
+
+	//public method
+	enable: function(){
+		return this.attach();
+	},
+
+	//public method
+	disable: function(){
+		return this.detach();
+	},
+
+	onFormValidate: function(valid, form, event){
+		//if there's no event, then this wasn't a submit event
+		if (!event) return;
+		var fv = this.element.retrieve('validator');
+		if (valid || (fv && !fv.options.stopOnFailure)){
+			event.stop();
+			this.send();
+		}
+	},
+
+	onSubmit: function(event){
+		var fv = this.element.retrieve('validator');
+		if (fv){
+			//form validator was created after Form.Request
+			this.element.removeEvent('submit', this.onSubmit);
+			fv.addEvent('onFormValidate', this.onFormValidate);
+			fv.validate(event);
+			return;
+		}
+		if (event) event.stop();
+		this.send();
+	},
+
+	saveClickedButton: function(event, target){
+		var targetName = target.get('name');
+		if (!targetName || !this.options.sendButtonClicked) return;
+		this.options.extraData[targetName] = target.get('value') || true;
+		this.clickedCleaner = function(){
+			delete this.options.extraData[targetName];
+			this.clickedCleaner = function(){};
+		}.bind(this);
+	},
+
+	clickedCleaner: function(){},
+
+	send: function(){
+		var str = this.element.toQueryString().trim(),
+			data = Object.toQueryString(this.options.extraData);
+
+		if (str) str += '&' + data;
+		else str = data;
+
+		this.fireEvent('send', [this.element, str.parseQueryString()]);
+		this.request.send({
+			data: str,
+			url: this.options.requestOptions.url || this.element.get('action')
+		});
+		this.clickedCleaner();
+		return this;
+	}
+
+});
+
+Element.implement('formUpdate', function(update, options){
+	var fq = this.retrieve('form.request');
+	if (!fq){
+		fq = new Form.Request(this, update, options);
+	} else {
+		if (update) fq.setTarget(update);
+		if (options) fq.setOptions(options).makeRequest();
+	}
+	fq.send();
+	return this;
+});
 
 })();
 
@@ -3479,7 +3477,6 @@ provides: [Fx.Reveal]
 
 (function(){
 
-
 var hideTheseOf = function(object){
 	var hideThese = object.options.hideInputs;
 	if (window.OverText){
@@ -3491,7 +3488,6 @@ var hideTheseOf = function(object){
 	}
 	return (hideThese) ? object.element.getElements(hideThese) : null;
 };
-
 
 Fx.Reveal = new Class({
 
@@ -3534,7 +3530,7 @@ Fx.Reveal = new Class({
 				});
 
 				this.element.setStyles({
-					display: Function.from(this.options.display).call(this),
+					display: Function.convert(this.options.display).call(this),
 					overflow: 'hidden'
 				});
 
@@ -3591,7 +3587,7 @@ Fx.Reveal = new Class({
 
 				var zero = {
 					height: 0,
-					display: Function.from(this.options.display).call(this)
+					display: Function.convert(this.options.display).call(this)
 				};
 				Object.each(startStyles, function(style, name){
 					zero[name] = 0;
@@ -3605,7 +3601,7 @@ Fx.Reveal = new Class({
 
 				this.$chain.unshift(function(){
 					this.element.style.cssText = this.cssText;
-					this.element.setStyle('display', Function.from(this.options.display).call(this));
+					this.element.setStyle('display', Function.convert(this.options.display).call(this));
 					if (!this.hidden) this.showing = false;
 					if (hideThese) hideThese.setStyle('visibility', 'visible');
 					this.callChain();
@@ -3737,20 +3733,19 @@ Form.Request.Append = new Class({
 
 	makeRequest: function(){
 		this.request = new Request.HTML(Object.merge({
-				url: this.element.get('action'),
-				method: this.element.get('method') || 'post',
-				spinnerTarget: this.element
-			}, this.options.requestOptions, {
-				evalScripts: false
-			})
-		).addEvents({
+			url: this.element.get('action'),
+			method: this.element.get('method') || 'post',
+			spinnerTarget: this.element
+		}, this.options.requestOptions, {
+			evalScripts: false
+		})).addEvents({
 			success: function(tree, elements, html, javascript){
 				var container;
 				var kids = Elements.from(html);
 				if (kids.length == 1){
 					container = kids[0];
 				} else {
-					 container = new Element('div', {
+					container = new Element('div', {
 						styles: {
 							display: 'none'
 						}
@@ -3965,7 +3960,7 @@ var OverText = this.OverText = new Class({
 				try {
 					this.element.fireEvent('focus');
 					this.element.focus();
-				} catch(e){} //IE barfs if you call focus on hidden elements
+				} catch (e){} //IE barfs if you call focus on hidden elements
 			}
 		}
 		return this;
@@ -4153,7 +4148,8 @@ Fx.Accordion = new Class({
 		alwaysHide: false,
 		trigger: 'click',
 		initialDisplayFx: true,
-		resetHeight: true
+		resetHeight: true,
+		keepOpen: false
 	},
 
 	initialize: function(){
@@ -4275,11 +4271,13 @@ Fx.Accordion = new Class({
 		var obj = {},
 			elements = this.elements,
 			options = this.options,
-			effects = this.effects;
+			effects = this.effects,
+			keepOpen = options.keepOpen,
+			alwaysHide = options.alwaysHide;
 
 		if (useFx == null) useFx = true;
 		if (typeOf(index) == 'element') index = elements.indexOf(index);
-		if (index == this.current && !options.alwaysHide) return this;
+		if (index == this.current && !alwaysHide && !keepOpen) return this;
 
 		if (options.resetHeight){
 			var prev = elements[this.current];
@@ -4288,7 +4286,7 @@ Fx.Accordion = new Class({
 			}
 		}
 
-		if ((this.timer && options.link == 'chain') || (index === this.current && !options.alwaysHide)) return this;
+		if (this.timer && options.link == 'chain') return this;
 
 		if (this.current != null) this.previous = this.current;
 		this.current = index;
@@ -4296,16 +4294,20 @@ Fx.Accordion = new Class({
 
 		elements.each(function(el, i){
 			obj[i] = {};
-			var hide;
-			if (i != index){
-				hide = true;
-			} else if (options.alwaysHide && ((el.offsetHeight > 0 && options.height) || el.offsetWidth > 0 && options.width)){
-				hide = true;
-				this.selfHidden = true;
+			var hide, isOpen;
+			if (!keepOpen || i == index){
+				if (i == index) isOpen = (el.offsetHeight > 0 && options.height) || (el.offsetWidth > 0 && options.width);
+
+				if (i != index){
+					hide = true;
+				} else if ((alwaysHide || keepOpen) && isOpen){
+					hide = true;
+					this.selfHidden = true;
+				}
+				this.fireEvent(hide ? 'background' : 'active', [this.togglers[i], el]);
+				for (var fx in effects) obj[i][fx] = hide ? 0 : el[effects[fx]];
+				if (!useFx && !hide && options.resetHeight) obj[i].height = 'auto';
 			}
-			this.fireEvent(hide ? 'background' : 'active', [this.togglers[i], el]);
-			for (var fx in effects) obj[i][fx] = hide ? 0 : el[effects[fx]];
-			if (!useFx && !hide && options.resetHeight) obj[i].height = 'auto';
 		}, this);
 
 		this.internalChain.clearChain();
@@ -4427,7 +4429,7 @@ Fx.Scroll = new Class({
 	},
 
 	toElement: function(el, axes){
-		axes = axes ? Array.from(axes) : ['x', 'y'];
+		axes = axes ? Array.convert(axes) : ['x', 'y'];
 		var scroll = isBody(this.element) ? {x: 0, y: 0} : this.element.getScroll();
 		var position = Object.map(document.id(el).getPosition(this.element), function(value, axis){
 			return axes.contains(axis) ? value + scroll[axis] : false;
@@ -4436,7 +4438,7 @@ Fx.Scroll = new Class({
 	},
 
 	toElementEdge: function(el, axes, offset){
-		axes = axes ? Array.from(axes) : ['x', 'y'];
+		axes = axes ? Array.convert(axes) : ['x', 'y'];
 		el = document.id(el);
 		var to = {},
 			position = el.getPosition(this.element),
@@ -4462,7 +4464,7 @@ Fx.Scroll = new Class({
 	},
 
 	toElementCenter: function(el, axes, offset){
-		axes = axes ? Array.from(axes) : ['x', 'y'];
+		axes = axes ? Array.convert(axes) : ['x', 'y'];
 		el = document.id(el);
 		var to = {},
 			position = el.getPosition(this.element),
@@ -4652,7 +4654,7 @@ Element.implement({
 				slide[flag ? 'slideOut' : 'slideIn'](mode);
 				this.store('slide:flag', !flag);
 				toggle = true;
-			break;
+				break;
 			default: slide.start(how, mode);
 		}
 		if (!toggle) this.eliminate('slide:flag');
@@ -4953,6 +4955,7 @@ var Drag = this.Drag = new Class({
 		limit: false,
 		handle: false,
 		invert: false,
+		unDraggableTags: ['button', 'input', 'a', 'textarea', 'select', 'option'],
 		preventDefault: false,
 		stopPropagation: false,
 		compensateScroll: false,
@@ -4984,7 +4987,7 @@ var Drag = this.Drag = new Class({
 		this.compensateScroll = {start: {}, diff: {}, last: {}};
 
 		if ('ondragstart' in document && !('FileReader' in window) && !Drag.ondragstartFixed){
-			document.ondragstart = Function.from(false);
+			document.ondragstart = Function.convert(false);
 			Drag.ondragstartFixed = true;
 		}
 
@@ -4994,7 +4997,7 @@ var Drag = this.Drag = new Class({
 			drag: this.drag.bind(this),
 			stop: this.stop.bind(this),
 			cancel: this.cancel.bind(this),
-			eventStop: Function.from(false),
+			eventStop: Function.convert(false),
 			scrollListener: this.scrollListener.bind(this)
 		};
 		this.attach();
@@ -5040,6 +5043,8 @@ var Drag = this.Drag = new Class({
 	},
 
 	start: function(event){
+		if (this.options.unDraggableTags.contains(event.target.get('tag'))) return;
+
 		var options = this.options;
 
 		if (event.rightClick) return;
@@ -5253,7 +5258,7 @@ Drag.Move = new Class({
 		this.overed = null;
 	},
 
-	setContainer: function(container) {
+	setContainer: function(container){
 		this.container = document.id(container);
 		if (this.container && typeOf(this.container) != 'element'){
 			this.container = document.id(this.container.getDocument().body);
@@ -5497,7 +5502,7 @@ var Sortables = this.Sortables = new Class({
 		}, this));
 	},
 
-	getDroppableCoordinates: function (element){
+	getDroppableCoordinates: function(element){
 		var offsetParent = element.getOffsetParent();
 		var position = element.getPosition(offsetParent);
 		var scroll = {
@@ -5512,7 +5517,7 @@ var Sortables = this.Sortables = new Class({
 			position.y -= scroll.w.y;
 		}
 
-        return position;
+		return position;
 	},
 
 	getClone: function(event, element){
@@ -5661,7 +5666,7 @@ requires:
   - Core/Element.Event
   - MooTools.More
 
-provides: [Assets]
+provides: [Assets, Asset.javascript, Asset.css, Asset.image, Asset.images]
 
 ...
 */
@@ -5764,7 +5769,7 @@ var Asset = this.Asset = {
 	},
 
 	images: function(sources, options){
-		sources = Array.from(sources);
+		sources = Array.convert(sources);
 
 		var fn = function(){},
 			counter = 0;
@@ -5839,7 +5844,7 @@ var Color = this.Color = new Type('Color', function(color, type){
 			var old = color;
 			color = color.hsbToRgb();
 			color.hsb = old;
-		break;
+			break;
 		case 'hex': color = color.hexToRgb(true); break;
 	}
 	color.rgb = color.slice(0, 3);
@@ -5897,14 +5902,15 @@ Array.implement({
 
 	rgbToHsb: function(){
 		var red = this[0],
-				green = this[1],
-				blue = this[2],
-				hue = 0;
-		var max = Math.max(red, green, blue),
-				min = Math.min(red, green, blue);
-		var delta = max - min;
-		var brightness = max / 255,
-				saturation = (max != 0) ? delta / max : 0;
+			green = this[1],
+			blue = this[2],
+			hue = 0,
+			max = Math.max(red, green, blue),
+			min = Math.min(red, green, blue),
+			delta = max - min,
+			brightness = max / 255,
+			saturation = (max != 0) ? delta / max : 0;
+
 		if (saturation != 0){
 			var rr = (max - red) / delta;
 			var gr = (max - green) / delta;
@@ -6158,7 +6164,6 @@ provides: [Element.Event.Pseudos.Keys]
 var keysStoreKey = '$moo:keys-pressed',
 	keysKeyupStoreKey = '$moo:keys-keyup';
 
-
 DOMEvent.definePseudo('keys', function(split, fn, args){
 
 	var event = args[0],
@@ -6216,7 +6221,7 @@ DOMEvent.defineKeys({
 	'107': '+',
 	'109': '-', // subtract
 	'189': '-'  // dash
-})
+});
 
 })();
 
@@ -6249,221 +6254,221 @@ provides: [Keyboard]
 
 (function(){
 
-	var Keyboard = this.Keyboard = new Class({
+var Keyboard = this.Keyboard = new Class({
 
-		Extends: Events,
+	Extends: Events,
 
-		Implements: [Options],
+	Implements: [Options],
 
-		options: {/*
-			onActivate: function(){},
-			onDeactivate: function(){},*/
-			defaultEventType: 'keydown',
-			active: false,
-			manager: null,
-			events: {},
-			nonParsedEvents: ['activate', 'deactivate', 'onactivate', 'ondeactivate', 'changed', 'onchanged']
-		},
+	options: {/*
+		onActivate: function(){},
+		onDeactivate: function(){},*/
+		defaultEventType: 'keydown',
+		active: false,
+		manager: null,
+		events: {},
+		nonParsedEvents: ['activate', 'deactivate', 'onactivate', 'ondeactivate', 'changed', 'onchanged']
+	},
 
-		initialize: function(options){
-			if (options && options.manager){
-				this._manager = options.manager;
-				delete options.manager;
+	initialize: function(options){
+		if (options && options.manager){
+			this._manager = options.manager;
+			delete options.manager;
+		}
+		this.setOptions(options);
+		this._setup();
+	},
+
+	addEvent: function(type, fn, internal){
+		return this.parent(Keyboard.parse(type, this.options.defaultEventType, this.options.nonParsedEvents), fn, internal);
+	},
+
+	removeEvent: function(type, fn){
+		return this.parent(Keyboard.parse(type, this.options.defaultEventType, this.options.nonParsedEvents), fn);
+	},
+
+	toggleActive: function(){
+		return this[this.isActive() ? 'deactivate' : 'activate']();
+	},
+
+	activate: function(instance){
+		if (instance){
+			if (instance.isActive()) return this;
+			//if we're stealing focus, store the last keyboard to have it so the relinquish command works
+			if (this._activeKB && instance != this._activeKB){
+				this.previous = this._activeKB;
+				this.previous.fireEvent('deactivate');
 			}
-			this.setOptions(options);
-			this._setup();
-		},
+			//if we're enabling a child, assign it so that events are now passed to it
+			this._activeKB = instance.fireEvent('activate');
+			Keyboard.manager.fireEvent('changed');
+		} else if (this._manager){
+			//else we're enabling ourselves, we must ask our parent to do it for us
+			this._manager.activate(this);
+		}
+		return this;
+	},
 
-		addEvent: function(type, fn, internal){
-			return this.parent(Keyboard.parse(type, this.options.defaultEventType, this.options.nonParsedEvents), fn, internal);
-		},
+	isActive: function(){
+		return this._manager ? (this._manager._activeKB == this) : (Keyboard.manager == this);
+	},
 
-		removeEvent: function(type, fn){
-			return this.parent(Keyboard.parse(type, this.options.defaultEventType, this.options.nonParsedEvents), fn);
-		},
-
-		toggleActive: function(){
-			return this[this.isActive() ? 'deactivate' : 'activate']();
-		},
-
-		activate: function(instance){
-			if (instance){
-				if (instance.isActive()) return this;
-				//if we're stealing focus, store the last keyboard to have it so the relinquish command works
-				if (this._activeKB && instance != this._activeKB){
-					this.previous = this._activeKB;
-					this.previous.fireEvent('deactivate');
-				}
-				//if we're enabling a child, assign it so that events are now passed to it
-				this._activeKB = instance.fireEvent('activate');
+	deactivate: function(instance){
+		if (instance){
+			if (instance === this._activeKB){
+				this._activeKB = null;
+				instance.fireEvent('deactivate');
 				Keyboard.manager.fireEvent('changed');
-			} else if (this._manager){
-				//else we're enabling ourselves, we must ask our parent to do it for us
-				this._manager.activate(this);
 			}
-			return this;
-		},
+		} else if (this._manager){
+			this._manager.deactivate(this);
+		}
+		return this;
+	},
 
-		isActive: function(){
-			return this._manager ? (this._manager._activeKB == this) : (Keyboard.manager == this);
-		},
+	relinquish: function(){
+		if (this.isActive() && this._manager && this._manager.previous) this._manager.activate(this._manager.previous);
+		else this.deactivate();
+		return this;
+	},
 
-		deactivate: function(instance){
-			if (instance){
-				if (instance === this._activeKB){
-					this._activeKB = null;
-					instance.fireEvent('deactivate');
-					Keyboard.manager.fireEvent('changed');
-				}
-			} else if (this._manager){
-				this._manager.deactivate(this);
-			}
-			return this;
-		},
+	//management logic
+	manage: function(instance){
+		if (instance._manager) instance._manager.drop(instance);
+		this._instances.push(instance);
+		instance._manager = this;
+		if (!this._activeKB) this.activate(instance);
+		return this;
+	},
 
-		relinquish: function(){
-			if (this.isActive() && this._manager && this._manager.previous) this._manager.activate(this._manager.previous);
-			else this.deactivate();
-			return this;
-		},
+	drop: function(instance){
+		instance.relinquish();
+		this._instances.erase(instance);
+		if (this._activeKB == instance){
+			if (this.previous && this._instances.contains(this.previous)) this.activate(this.previous);
+			else this._activeKB = this._instances[0];
+		}
+		return this;
+	},
 
-		//management logic
-		manage: function(instance){
-			if (instance._manager) instance._manager.drop(instance);
-			this._instances.push(instance);
-			instance._manager = this;
-			if (!this._activeKB) this.activate(instance);
-			return this;
-		},
+	trace: function(){
+		Keyboard.trace(this);
+	},
 
-		drop: function(instance){
-			instance.relinquish();
-			this._instances.erase(instance);
-			if (this._activeKB == instance){
-				if (this.previous && this._instances.contains(this.previous)) this.activate(this.previous);
-				else this._activeKB = this._instances[0];
-			}
-			return this;
-		},
+	each: function(fn){
+		Keyboard.each(this, fn);
+	},
 
-		trace: function(){
-			Keyboard.trace(this);
-		},
+	/*
+		PRIVATE METHODS
+	*/
 
-		each: function(fn){
-			Keyboard.each(this, fn);
-		},
+	_instances: [],
 
-		/*
-			PRIVATE METHODS
-		*/
+	_disable: function(instance){
+		if (this._activeKB == instance) this._activeKB = null;
+	},
 
-		_instances: [],
+	_setup: function(){
+		this.addEvents(this.options.events);
+		//if this is the root manager, nothing manages it
+		if (Keyboard.manager && !this._manager) Keyboard.manager.manage(this);
+		if (this.options.active) this.activate();
+		else this.relinquish();
+	},
 
-		_disable: function(instance){
-			if (this._activeKB == instance) this._activeKB = null;
-		},
+	_handle: function(event, type){
+		//Keyboard.stop(event) prevents key propagation
+		if (event.preventKeyboardPropagation) return;
 
-		_setup: function(){
-			this.addEvents(this.options.events);
-			//if this is the root manager, nothing manages it
-			if (Keyboard.manager && !this._manager) Keyboard.manager.manage(this);
-			if (this.options.active) this.activate();
-			else this.relinquish();
-		},
-
-		_handle: function(event, type){
-			//Keyboard.stop(event) prevents key propagation
+		var bubbles = !!this._manager;
+		if (bubbles && this._activeKB){
+			this._activeKB._handle(event, type);
 			if (event.preventKeyboardPropagation) return;
-
-			var bubbles = !!this._manager;
-			if (bubbles && this._activeKB){
-				this._activeKB._handle(event, type);
-				if (event.preventKeyboardPropagation) return;
-			}
-			this.fireEvent(type, event);
-
-			if (!bubbles && this._activeKB) this._activeKB._handle(event, type);
 		}
+		this.fireEvent(type, event);
 
+		if (!bubbles && this._activeKB) this._activeKB._handle(event, type);
+	}
+
+});
+
+var parsed = {};
+var modifiers = ['shift', 'control', 'alt', 'meta'];
+var regex = /^(?:shift|control|ctrl|alt|meta)$/;
+
+Keyboard.parse = function(type, eventType, ignore){
+	if (ignore && ignore.contains(type.toLowerCase())) return type;
+
+	type = type.toLowerCase().replace(/^(keyup|keydown):/, function($0, $1){
+		eventType = $1;
+		return '';
 	});
 
-	var parsed = {};
-	var modifiers = ['shift', 'control', 'alt', 'meta'];
-	var regex = /^(?:shift|control|ctrl|alt|meta)$/;
+	if (!parsed[type]){
+		if (type != '+'){
+			var key, mods = {};
+			type.split('+').each(function(part){
+				if (regex.test(part)) mods[part] = true;
+				else key = part;
+			});
 
-	Keyboard.parse = function(type, eventType, ignore){
-		if (ignore && ignore.contains(type.toLowerCase())) return type;
+			mods.control = mods.control || mods.ctrl; // allow both control and ctrl
 
-		type = type.toLowerCase().replace(/^(keyup|keydown):/, function($0, $1){
-			eventType = $1;
-			return '';
-		});
+			var keys = [];
+			modifiers.each(function(mod){
+				if (mods[mod]) keys.push(mod);
+			});
 
-		if (!parsed[type]){
-		    if (type != '+'){
-				var key, mods = {};
-				type.split('+').each(function(part){
-					if (regex.test(part)) mods[part] = true;
-					else key = part;
-				});
-
-				mods.control = mods.control || mods.ctrl; // allow both control and ctrl
-
-				var keys = [];
-				modifiers.each(function(mod){
-					if (mods[mod]) keys.push(mod);
-				});
-
-				if (key) keys.push(key);
-				parsed[type] = keys.join('+');
-			} else {
-			    parsed[type] = type;
-			}
+			if (key) keys.push(key);
+			parsed[type] = keys.join('+');
+		} else {
+			parsed[type] = type;
 		}
+	}
 
-		return eventType + ':keys(' + parsed[type] + ')';
-	};
+	return eventType + ':keys(' + parsed[type] + ')';
+};
 
-	Keyboard.each = function(keyboard, fn){
-		var current = keyboard || Keyboard.manager;
-		while (current){
-			fn(current);
-			current = current._activeKB;
-		}
-	};
+Keyboard.each = function(keyboard, fn){
+	var current = keyboard || Keyboard.manager;
+	while (current){
+		fn(current);
+		current = current._activeKB;
+	}
+};
 
-	Keyboard.stop = function(event){
-		event.preventKeyboardPropagation = true;
-	};
+Keyboard.stop = function(event){
+	event.preventKeyboardPropagation = true;
+};
 
-	Keyboard.manager = new Keyboard({
-		active: true
+Keyboard.manager = new Keyboard({
+	active: true
+});
+
+Keyboard.trace = function(keyboard){
+	keyboard = keyboard || Keyboard.manager;
+	var hasConsole = window.console && console.log;
+	if (hasConsole) console.log('the following items have focus: ');
+	Keyboard.each(keyboard, function(current){
+		if (hasConsole) console.log(document.id(current.widget) || current.wiget || current);
+	});
+};
+
+var handler = function(event){
+	var keys = [];
+	modifiers.each(function(mod){
+		if (event[mod]) keys.push(mod);
 	});
 
-	Keyboard.trace = function(keyboard){
-		keyboard = keyboard || Keyboard.manager;
-		var hasConsole = window.console && console.log;
-		if (hasConsole) console.log('the following items have focus: ');
-		Keyboard.each(keyboard, function(current){
-			if (hasConsole) console.log(document.id(current.widget) || current.wiget || current);
-		});
-	};
+	if (!regex.test(event.key)) keys.push(event.key);
+	Keyboard.manager._handle(event, event.type + ':keys(' + keys.join('+') + ')');
+};
 
-	var handler = function(event){
-		var keys = [];
-		modifiers.each(function(mod){
-			if (event[mod]) keys.push(mod);
-		});
-
-		if (!regex.test(event.key)) keys.push(event.key);
-		Keyboard.manager._handle(event, event.type + ':keys(' + keys.join('+') + ')');
-	};
-
-	document.addEvents({
-		'keyup': handler,
-		'keydown': handler
-	});
+document.addEvents({
+	'keyup': handler,
+	'keydown': handler
+});
 
 })();
 
@@ -6505,7 +6510,7 @@ Keyboard.implement({
 		this._shortcuts = this._shortcuts || [];
 		this._shortcutIndex = this._shortcutIndex || {};
 
-		shortcut.getKeyboard = Function.from(this);
+		shortcut.getKeyboard = Function.convert(this);
 		shortcut.name = name;
 		this._shortcutIndex[name] = shortcut;
 		this._shortcuts.push(shortcut);
@@ -6544,14 +6549,13 @@ Keyboard.implement({
 });
 
 Keyboard.rebind = function(newKeys, shortcuts){
-	Array.from(shortcuts).each(function(shortcut){
+	Array.convert(shortcuts).each(function(shortcut){
 		shortcut.getKeyboard().removeEvent(shortcut.keys, shortcut.handler);
 		shortcut.getKeyboard().addEvent(newKeys, shortcut.handler);
 		shortcut.keys = newKeys;
 		shortcut.getKeyboard().fireEvent('rebound');
 	});
 };
-
 
 Keyboard.getActiveShortcuts = function(keyboard){
 	var activeKBS = [], activeSCS = [];
@@ -6564,11 +6568,11 @@ Keyboard.getShortcut = function(name, keyboard, opts){
 	opts = opts || {};
 	var shortcuts = opts.many ? [] : null,
 		set = opts.many ? function(kb){
-				var shortcut = kb.getShortcut(name);
-				if (shortcut) shortcuts.push(shortcut);
-			} : function(kb){
-				if (!shortcuts) shortcuts = kb.getShortcut(name);
-			};
+			var shortcut = kb.getShortcut(name);
+			if (shortcut) shortcuts.push(shortcut);
+		} : function(kb){
+			if (!shortcuts) shortcuts = kb.getShortcut(name);
+		};
 	Keyboard.each(keyboard, set);
 	return shortcuts;
 };
@@ -6863,8 +6867,8 @@ var Tips = this.Tips = new Class({
 			['title', 'text'].each(function(value){
 				var content = element.retrieve('tip:' + value);
 				var div = this['_' + value + 'Element'] = new Element('div', {
-						'class': 'tip-' + value
-					}).inject(this.container);
+					'class': 'tip-' + value
+				}).inject(this.container);
 				if (content){
 					this.fill(div, content);
 					showTip = true;

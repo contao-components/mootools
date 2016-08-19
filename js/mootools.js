@@ -3,10 +3,10 @@
 MooTools: the javascript framework
 
 web build:
- - http://mootools.net/core/8ac7c8be294607dada0b5170c4eef8de
+ - http://mootools.net/core/builder/e426a9ae7167c5807b173d5deff673fc
 
 packager build:
- - packager build Core/Array Core/String Core/Number Core/Function Core/Object Core/Event Core/Browser Core/Class Core/Class.Extras Core/Slick.Parser Core/Slick.Finder Core/Element Core/Element.Style Core/Element.Event Core/Element.Delegation Core/Element.Dimensions Core/Fx Core/Fx.CSS Core/Fx.Tween Core/Fx.Morph Core/Fx.Transitions Core/Request Core/Request.HTML Core/Request.JSON Core/Cookie Core/JSON Core/DOMReady
+ - packager build Core/Array Core/String Core/Number Core/Function Core/Object Core/Event Core/Browser Core/Class Core/Class.Extras Class.Thenable Core/Slick.Parser Core/Slick.Finder Core/Element Core/Element.Style Core/Element.Event Core/Element.Delegation Core/Element.Dimensions Core/Fx Core/Fx.CSS Core/Fx.Tween Core/Fx.Morph Core/Fx.Transitions Core/Request Core/Request.HTML Core/Request.JSON Core/Cookie Core/JSON Core/DOMReady
 
 ...
 */
@@ -20,7 +20,7 @@ description: The heart of MooTools.
 
 license: MIT-style license.
 
-copyright: Copyright (c) 2006-2015 [Valerio Proietti](http://mad4milk.net/).
+copyright: Copyright (c) 2006-2016 [Valerio Proietti](http://mad4milk.net/).
 
 authors: The MooTools production team (http://mootools.net/developers/)
 
@@ -36,8 +36,8 @@ provides: [Core, MooTools, Type, typeOf, instanceOf, Native]
 (function(){
 
 this.MooTools = {
-	version: '1.5.2',
-	build: 'ed01297a1a19de0675404640e7377cf97694e131'
+	version: '1.6.0',
+	build: '529422872adfff401b901b8b6c7ca5114ee95e2b'
 };
 
 window.$ = null; // PATCH: see #5892
@@ -78,7 +78,7 @@ var hasOwnProperty = Object.prototype.hasOwnProperty;
 var enumerables = true;
 for (var i in {toString: 1}) enumerables = null;
 if (enumerables) enumerables = ['hasOwnProperty', 'valueOf', 'isPrototypeOf', 'propertyIsEnumerable', 'toLocaleString', 'toString', 'constructor'];
-function forEachObjectEnumberableKey(object, fn, bind) {
+function forEachObjectEnumberableKey(object, fn, bind){
 	if (enumerables) for (var i = enumerables.length; i--;){
 		var k = enumerables[i];
 		// signature has key-value, so overloadSetter can directly pass the
@@ -137,25 +137,33 @@ Function.prototype.implement = function(key, value){
 
 var slice = Array.prototype.slice;
 
-Function.from = function(item){
+Array.convert = function(item){
+	if (item == null) return [];
+	return (Type.isEnumerable(item) && typeof item != 'string') ? (typeOf(item) == 'array') ? item : slice.call(item) : [item];
+};
+
+Function.convert = function(item){
 	return (typeOf(item) == 'function') ? item : function(){
 		return item;
 	};
 };
 
-Array.from = function(item){
-	if (item == null) return [];
-	return (Type.isEnumerable(item) && typeof item != 'string') ? (typeOf(item) == 'array') ? item : slice.call(item) : [item];
-};
-
-Number.from = function(item){
+Number.convert = function(item){
 	var number = parseFloat(item);
 	return isFinite(number) ? number : null;
 };
 
-String.from = function(item){
+String.convert = function(item){
 	return item + '';
 };
+
+/*<1.5compat>*/
+Array.from = Array.convert;
+/*</1.5compat>*/
+
+Function.from = Function.convert;
+Number.from = Number.convert;
+String.from = String.convert;
 
 // hide, protect
 
@@ -187,7 +195,6 @@ var Type = this.Type = function(name, object){
 			object.prototype.$family = (function(){
 				return lower;
 			}).hide();
-
 		}
 	}
 
@@ -369,7 +376,6 @@ Object.extend({
 
 Object.each = Object.forEach;
 
-
 // Array & Object cloning, Object merging and appending
 
 var cloneOf = function(item){
@@ -391,7 +397,7 @@ var mergeOne = function(source, key, current){
 		case 'object':
 			if (typeOf(source[key]) == 'object') Object.merge(source[key], current);
 			else source[key] = Object.clone(current);
-		break;
+			break;
 		case 'array': source[key] = current.clone(); break;
 		default: source[key] = current;
 	}
@@ -438,8 +444,6 @@ var UID = Date.now();
 String.extend('uniqueID', function(){
 	return (UID++).toString(36);
 });
-
-
 
 })();
 
@@ -748,13 +752,17 @@ Number.implement({
 Number.alias('each', 'times');
 
 (function(math){
-	var methods = {};
-	math.each(function(name){
-		if (!Number[name]) methods[name] = function(){
-			return Math[name].apply(null, [this].concat(Array.from(arguments)));
-		};
-	});
-	Number.implement(methods);
+
+var methods = {};
+
+math.each(function(name){
+	if (!Number[name]) methods[name] = function(){
+		return Math[name].apply(null, [this].concat(Array.convert(arguments)));
+	};
+});
+
+Number.implement(methods);
+
 })(['abs', 'acos', 'asin', 'atan', 'atan2', 'ceil', 'cos', 'exp', 'floor', 'log', 'max', 'min', 'pow', 'sin', 'sqrt', 'tan']);
 
 /*
@@ -790,7 +798,7 @@ Function.implement({
 
 	attempt: function(args, bind){
 		try {
-			return this.apply(bind, Array.from(args));
+			return this.apply(bind, Array.convert(args));
 		} catch (e){}
 
 		return null;
@@ -819,7 +827,7 @@ Function.implement({
 
 	pass: function(args, bind){
 		var self = this;
-		if (args != null) args = Array.from(args);
+		if (args != null) args = Array.convert(args);
 		return function(){
 			return self.apply(bind, args || arguments);
 		};
@@ -852,8 +860,6 @@ provides: [Object, Hash]
 */
 
 (function(){
-
-var hasOwnProperty = Object.prototype.hasOwnProperty;
 
 Object.extend({
 
@@ -945,7 +951,7 @@ Object.extend({
 						qs[i] = val;
 					});
 					result = Object.toQueryString(qs, key);
-				break;
+					break;
 				default: result = key + '=' + encodeURIComponent(value);
 			}
 			if (value != null) queryString.push(result);
@@ -1130,7 +1136,7 @@ Browser.extend({
 
 this.Window = this.$constructor = new Type('Window', function(){});
 
-this.$family = Function.from('window').hide();
+this.$family = Function.convert('window').hide();
 
 Window.mirror(function(name, method){
 	window[name] = method;
@@ -1138,7 +1144,7 @@ Window.mirror(function(name, method){
 
 this.Document = document.$constructor = new Type('Document', function(){});
 
-document.$family = Function.from('document').hide();
+document.$family = Function.convert('document').hide();
 
 Document.mirror(function(name, method){
 	document[name] = method;
@@ -1148,7 +1154,7 @@ document.html = document.documentElement;
 if (!document.head) document.head = document.getElementsByTagName('head')[0];
 
 if (document.execCommand) try {
-	document.execCommand("BackgroundImageCache", false, true);
+	document.execCommand('BackgroundImageCache', false, true);
 } catch (e){}
 
 /*<ltIE9>*/
@@ -1162,11 +1168,11 @@ if (this.attachEvent && !this.addEventListener){
 }
 
 // IE fails on collections and <select>.options (refers to <select>)
-var arrayFrom = Array.from;
+var arrayFrom = Array.convert;
 try {
 	arrayFrom(document.html.childNodes);
-} catch(e){
-	Array.from = function(item){
+} catch (e){
+	Array.convert = function(item){
 		if (typeof item != 'string' && Type.isEnumerable(item) && typeOf(item) != 'array'){
 			var i = item.length, array = new Array(i);
 			while (i--) array[i] = item[i];
@@ -1180,7 +1186,7 @@ try {
 	['pop', 'push', 'reverse', 'shift', 'sort', 'splice', 'unshift', 'concat', 'join', 'slice'].each(function(name){
 		var method = prototype[name];
 		Array[name] = function(item){
-			return method.apply(Array.from(item), slice.call(arguments, 1));
+			return method.apply(Array.convert(item), slice.call(arguments, 1));
 		};
 	});
 }
@@ -1208,15 +1214,15 @@ provides: Event
 
 var _keys = {};
 var normalizeWheelSpeed = function(event){
-    var normalized;
-    if (event.wheelDelta){
-        normalized = event.wheelDelta % 120 == 0 ? event.wheelDelta / 120 : event.wheelDelta / 12;
-    } else {
-        var rawAmount = event.deltaY || event.detail || 0;
-        normalized = -(rawAmount % 3 == 0 ? rawAmount / 3 : rawAmount * 10);
-    }
-    return normalized;
-}
+	var normalized;
+	if (event.wheelDelta){
+		normalized = event.wheelDelta % 120 == 0 ? event.wheelDelta / 120 : event.wheelDelta / 12;
+	} else {
+		var rawAmount = event.deltaY || event.detail || 0;
+		normalized = -(rawAmount % 3 == 0 ? rawAmount / 3 : rawAmount * 10);
+	}
+	return normalized;
+};
 
 var DOMEvent = this.DOMEvent = new Type('DOMEvent', function(event, win){
 	if (!win) win = window;
@@ -1367,7 +1373,7 @@ var reset = function(object){
 				var F = function(){};
 				F.prototype = value;
 				object[key] = reset(new F);
-			break;
+				break;
 			case 'array': object[key] = value.clone(); break;
 		}
 	}
@@ -1420,7 +1426,7 @@ Class.Mutators = {
 	},
 
 	Implements: function(items){
-		Array.from(items).each(function(item){
+		Array.convert(items).each(function(item){
 			var instance = new item;
 			for (var key in instance) implement.call(this, key, instance[key], true);
 		}, this);
@@ -1479,7 +1485,6 @@ this.Events = new Class({
 
 	addEvent: function(type, fn, internal){
 		type = removeOn(type);
-
 		this.$events[type] = (this.$events[type] || []).include(fn);
 		if (internal) fn.internal = true;
 		return this;
@@ -1494,7 +1499,7 @@ this.Events = new Class({
 		type = removeOn(type);
 		var events = this.$events[type];
 		if (!events) return this;
-		args = Array.from(args);
+		args = Array.convert(args);
 		events.each(function(fn){
 			if (delay) fn.delay(delay, this, args);
 			else fn.apply(this, args);
@@ -1544,6 +1549,230 @@ this.Options = new Class({
 	}
 
 });
+
+})();
+
+/*
+---
+
+name: Class.Thenable
+
+description: Contains a Utility Class that can be implemented into your own Classes to make them "thenable".
+
+license: MIT-style license.
+
+requires: Class
+
+provides: [Class.Thenable]
+
+...
+*/
+
+(function(){
+
+var STATE_PENDING = 0,
+	STATE_FULFILLED = 1,
+	STATE_REJECTED = 2;
+
+var Thenable = Class.Thenable = new Class({
+
+	$thenableState: STATE_PENDING,
+	$thenableResult: null,
+	$thenableReactions: [],
+
+	resolve: function(value){
+		resolve(this, value);
+		return this;
+	},
+
+	reject: function(reason){
+		reject(this, reason);
+		return this;
+	},
+
+	getThenableState: function(){
+		switch (this.$thenableState){
+			case STATE_PENDING:
+				return 'pending';
+
+			case STATE_FULFILLED:
+				return 'fulfilled';
+
+			case STATE_REJECTED:
+				return 'rejected';
+		}
+	},
+
+	resetThenable: function(reason){
+		reject(this, reason);
+		reset(this);
+		return this;
+	},
+
+	then: function(onFulfilled, onRejected){
+		if (typeof onFulfilled !== 'function') onFulfilled = 'Identity';
+		if (typeof onRejected !== 'function') onRejected = 'Thrower';
+
+		var thenable = new Thenable();
+
+		this.$thenableReactions.push({
+			thenable: thenable,
+			fulfillHandler: onFulfilled,
+			rejectHandler: onRejected
+		});
+
+		if (this.$thenableState !== STATE_PENDING){
+			react(this);
+		}
+
+		return thenable;
+	},
+
+	'catch': function(onRejected){
+		return this.then(null, onRejected);
+	}
+
+});
+
+Thenable.extend({
+	resolve: function(value){
+		var thenable;
+		if (value instanceof Thenable){
+			thenable = value;
+		} else {
+			thenable = new Thenable();
+			resolve(thenable, value);
+		}
+		return thenable;
+	},
+	reject: function(reason){
+		var thenable = new Thenable();
+		reject(thenable, reason);
+		return thenable;
+	}
+});
+
+// Private functions
+
+function resolve(thenable, value){
+	if (thenable.$thenableState === STATE_PENDING){
+		if (thenable === value){
+			reject(thenable, new TypeError('Tried to resolve a thenable with itself.'));
+		} else if (value && (typeof value === 'object' || typeof value === 'function')){
+			var then;
+			try {
+				then = value.then;
+			} catch (exception){
+				reject(thenable, exception);
+			}
+			if (typeof then === 'function'){
+				var resolved = false;
+				defer(function(){
+					try {
+						then.call(
+							value,
+							function(nextValue){
+								if (!resolved){
+									resolved = true;
+									resolve(thenable, nextValue);
+								}
+							},
+							function(reason){
+								if (!resolved){
+									resolved = true;
+									reject(thenable, reason);
+								}
+							}
+						);
+					} catch (exception){
+						if (!resolved){
+							resolved = true;
+							reject(thenable, exception);
+						}
+					}
+				});
+			} else {
+				fulfill(thenable, value);
+			}
+		} else {
+			fulfill(thenable, value);
+		}
+	}
+}
+
+function fulfill(thenable, value){
+	if (thenable.$thenableState === STATE_PENDING){
+		thenable.$thenableResult = value;
+		thenable.$thenableState = STATE_FULFILLED;
+
+		react(thenable);
+	}
+}
+
+function reject(thenable, reason){
+	if (thenable.$thenableState === STATE_PENDING){
+		thenable.$thenableResult = reason;
+		thenable.$thenableState = STATE_REJECTED;
+
+		react(thenable);
+	}
+}
+
+function reset(thenable){
+	if (thenable.$thenableState !== STATE_PENDING){
+		thenable.$thenableResult = null;
+		thenable.$thenableState = STATE_PENDING;
+	}
+}
+
+function react(thenable){
+	var state = thenable.$thenableState,
+		result = thenable.$thenableResult,
+		reactions = thenable.$thenableReactions,
+		type;
+
+	if (state === STATE_FULFILLED){
+		thenable.$thenableReactions = [];
+		type = 'fulfillHandler';
+	} else if (state == STATE_REJECTED){
+		thenable.$thenableReactions = [];
+		type = 'rejectHandler';
+	}
+
+	if (type){
+		defer(handle.pass([result, reactions, type]));
+	}
+}
+
+function handle(result, reactions, type){
+	for (var i = 0, l = reactions.length; i < l; ++i){
+		var reaction = reactions[i],
+			handler = reaction[type];
+
+		if (handler === 'Identity'){
+			resolve(reaction.thenable, result);
+		} else if (handler === 'Thrower'){
+			reject(reaction.thenable, result);
+		} else {
+			try {
+				resolve(reaction.thenable, handler(result));
+			} catch (exception){
+				reject(reaction.thenable, exception);
+			}
+		}
+	}
+}
+
+var defer;
+if (typeof process !== 'undefined' && typeof process.nextTick === 'function'){
+	defer = process.nextTick;
+} else if (typeof setImmediate !== 'undefined'){
+	defer = setImmediate;
+} else {
+	defer = function(fn){
+		setTimeout(fn, 0);
+	};
+}
 
 })();
 
@@ -1647,7 +1876,7 @@ __END__
 	)"
 */
 	"^(?:\\s*(,)\\s*|\\s*(<combinator>+)\\s*|(\\s+)|(<unicode>+|\\*)|\\#(<unicode>+)|\\.(<unicode>+)|\\[\\s*(<unicode1>+)(?:\\s*([*^$!~|]?=)(?:\\s*(?:([\"']?)(.*?)\\9)))?\\s*\\](?!\\])|(:+)(<unicode>+)(?:\\((?:(?:([\"'])([^\\13]*)\\13)|((?:\\([^)]+\\)|[^()]*)+))\\))?)"
-	.replace(/<combinator>/, '[' + escapeRegExp(">+~`!@$%^&={}\\;</") + ']')
+	.replace(/<combinator>/, '[' + escapeRegExp('>+~`!@$%^&={}\\;</') + ']')
 	.replace(/<unicode>/g, '(?:[\\w\\u00a1-\\uFFFF-]|\\\\[^\\s0-9a-f])')
 	.replace(/<unicode1>/g, '(?:[:\\w\\u00a1-\\uFFFF-]|\\\\[^\\s0-9a-f])')
 );
@@ -1862,7 +2091,7 @@ local.setDocument = function(document){
 	try {
 		testNode.innerHTML = '<a id="'+id+'"></a>';
 		features.isHTMLDocument = !!document.getElementById(id);
-	} catch(e){}
+	} catch (e){}
 
 	if (features.isHTMLDocument){
 
@@ -1877,7 +2106,7 @@ local.setDocument = function(document){
 			testNode.innerHTML = 'foo</foo>';
 			selected = testNode.getElementsByTagName('*');
 			starSelectsClosed = (selected && !!selected.length && selected[0].nodeName.charAt(0) == '/');
-		} catch(e){};
+		} catch (e){};
 
 		features.brokenStarGEBTN = starSelectsComments || starSelectsClosed;
 
@@ -1885,7 +2114,7 @@ local.setDocument = function(document){
 		try {
 			testNode.innerHTML = '<a name="'+ id +'"></a><b id="'+ id +'"></b>';
 			features.idGetsName = document.getElementById(id) === testNode.firstChild;
-		} catch(e){}
+		} catch (e){}
 
 		if (testNode.getElementsByClassName){
 
@@ -1895,13 +2124,13 @@ local.setDocument = function(document){
 				testNode.getElementsByClassName('b').length;
 				testNode.firstChild.className = 'b';
 				cachedGetElementsByClassName = (testNode.getElementsByClassName('b').length != 2);
-			} catch(e){};
+			} catch (e){};
 
 			// Opera 9.6 getElementsByClassName doesnt detects the class if its not the first one
 			try {
 				testNode.innerHTML = '<a class="a"></a><a class="f b a"></a>';
 				brokenSecondClassNameGEBCN = (testNode.getElementsByClassName('a').length != 2);
-			} catch(e){}
+			} catch (e){}
 
 			features.brokenGEBCN = cachedGetElementsByClassName || brokenSecondClassNameGEBCN;
 		}
@@ -1912,25 +2141,25 @@ local.setDocument = function(document){
 				testNode.innerHTML = 'foo</foo>';
 				selected = testNode.querySelectorAll('*');
 				features.starSelectsClosedQSA = (selected && !!selected.length && selected[0].nodeName.charAt(0) == '/');
-			} catch(e){}
+			} catch (e){}
 
 			// Safari 3.2 querySelectorAll doesnt work with mixedcase on quirksmode
 			try {
 				testNode.innerHTML = '<a class="MiX"></a>';
 				features.brokenMixedCaseQSA = !testNode.querySelectorAll('.MiX').length;
-			} catch(e){}
+			} catch (e){}
 
 			// Webkit and Opera dont return selected options on querySelectorAll
 			try {
 				testNode.innerHTML = '<select><option selected="selected">a</option></select>';
 				features.brokenCheckedQSA = (testNode.querySelectorAll(':checked').length == 0);
-			} catch(e){};
+			} catch (e){};
 
 			// IE returns incorrect results for attr[*^$]="" selectors on querySelectorAll
 			try {
 				testNode.innerHTML = '<a class=""></a>';
 				features.brokenEmptyAttributeQSA = (testNode.querySelectorAll('[class*=""]').length != 0);
-			} catch(e){}
+			} catch (e){}
 
 		}
 
@@ -1938,7 +2167,7 @@ local.setDocument = function(document){
 		try {
 			testNode.innerHTML = '<form action="s"><input id="action"/></form>';
 			brokenFormAttributeGetter = (testNode.firstChild.getAttribute('action') != 's');
-		} catch(e){}
+		} catch (e){}
 
 		// native matchesSelector function
 
@@ -1947,7 +2176,7 @@ local.setDocument = function(document){
 			// if matchesSelector trows errors on incorrect sintaxes we can use it
 			features.nativeMatchesSelector.call(root, ':slick');
 			features.nativeMatchesSelector = null;
-		} catch(e){}
+		} catch (e){}
 
 	}
 
@@ -1955,7 +2184,7 @@ local.setDocument = function(document){
 		root.slick_expando = 1;
 		delete root.slick_expando;
 		features.getUID = this.getUIDHTML;
-	} catch(e){
+	} catch (e){
 		features.getUID = this.getUIDXML;
 	}
 
@@ -2019,7 +2248,7 @@ local.setDocument = function(document){
 		bRange.setStart(b, 0);
 		bRange.setEnd(b, 0);
 		return aRange.compareBoundaryPoints(Range.START_TO_END, bRange);
-	} : null ;
+	} : null;
 
 	root = null;
 
@@ -2044,7 +2273,7 @@ local.search = function(context, expression, append, first){
 
 	// setup
 
-	var parsed, i,
+	var parsed, i, node, nodes,
 		uniques = this.uniques = {},
 		hasOthers = !!(append && append.length),
 		contextIsDocument = (context.nodeType == 9);
@@ -2063,8 +2292,7 @@ local.search = function(context, expression, append, first){
 		simpleSelectors: if (simpleSelector){
 
 			var symbol = simpleSelector[1],
-				name = simpleSelector[2],
-				node, nodes;
+				name = simpleSelector[2];
 
 			if (!symbol){
 
@@ -2129,11 +2357,11 @@ local.search = function(context, expression, append, first){
 				|| Slick.disableQSA
 			) break querySelector;
 
-			var _expression = expression, _context = context;
+			var _expression = expression, _context = context, currentId;
 			if (!contextIsDocument){
 				// non-document rooted QSA
 				// credits to Andrew Dupont
-				var currentId = _context.getAttribute('id'), slickid = 'slickid__';
+				currentId = _context.getAttribute('id'), slickid = 'slickid__';
 				_context.setAttribute('id', slickid);
 				_expression = '#' + slickid + ' ' + _expression;
 				context = _context.parentNode;
@@ -2142,7 +2370,7 @@ local.search = function(context, expression, append, first){
 			try {
 				if (first) return context.querySelector(_expression) || null;
 				else nodes = context.querySelectorAll(_expression);
-			} catch(e){
+			} catch (e){
 				qsaFailExpCache[expression] = 1;
 				break querySelector;
 			} finally {
@@ -2341,7 +2569,7 @@ local.matchNode = function(node, selector){
 	if (this.isHTMLDocument && this.nativeMatchesSelector){
 		try {
 			return this.nativeMatchesSelector.call(node, selector.replace(/\[([^=]+)=\s*([^'"\]]+?)\s*\]/g, '[$1="$2"]'));
-		} catch(matchError){}
+		} catch (matchError){}
 	}
 
 	var parsed = this.Slick.parse(selector);
@@ -2807,7 +3035,6 @@ var Element = this.Element = function(tag, props){
 	return document.newElement(tag, props);
 };
 
-
 if (Browser.Element){
 	Element.prototype = Browser.Element.prototype;
 	// IE8 and IE9 require the wrapping.
@@ -2839,7 +3066,7 @@ if (!Browser.Element){
 
 	Element.Prototype = {
 		'$constructor': Element,
-		'$family': Function.from('element').hide()
+		'$family': Function.convert('element').hide()
 	};
 
 	Element.mirror(function(name, method){
@@ -2971,13 +3198,13 @@ var escapeQuotes = function(html){
 /*<ltIE9>*/
 // #2479 - IE8 Cannot set HTML of style element
 var canChangeStyleHTML = (function(){
-    var div = document.createElement('style'),
-        flag = false;
-    try {
-        div.innerHTML = '#justTesing{margin: 0px;}';
-        flag = !!div.innerHTML;
-    } catch(e){}
-    return flag;
+	var div = document.createElement('style'),
+		flag = false;
+	try {
+		div.innerHTML = '#justTesing{margin: 0px;}';
+		flag = !!div.innerHTML;
+	} catch (e){}
+	return flag;
 })();
 /*</ltIE9>*/
 
@@ -3235,7 +3462,7 @@ Object.forEach(properties, function(real, key){
 });
 
 /*<ltIE9>*/
-propertySetters.text = (function(setter){
+propertySetters.text = (function(){
 	return function(node, value){
 		if (node.get('tag') == 'style') node.set('html', value);
 		else node[properties.text] = value;
@@ -3299,7 +3526,7 @@ propertyGetters['class'] = function(node){
 /* <webkit> */
 var el = document.createElement('button');
 // IE sets type as readonly and throws
-try { el.type = 'button'; } catch(e){}
+try { el.type = 'button'; } catch (e){}
 if (el.type != 'button') propertySetters.type = function(node, value){
 	node.setAttribute('type', value);
 };
@@ -3311,13 +3538,13 @@ el = null;
 /*<ltIE9>*/
 // #2479 - IE8 Cannot set HTML of style element
 var canChangeStyleHTML = (function(){
-    var div = document.createElement('style'),
-        flag = false;
-    try {
-        div.innerHTML = '#justTesing{margin: 0px;}';
-        flag = !!div.innerHTML;
-    } catch(e){}
-    return flag;
+	var div = document.createElement('style'),
+		flag = false;
+	try {
+		div.innerHTML = '#justTesing{margin: 0px;}';
+		flag = !!div.innerHTML;
+	} catch (e){}
+	return flag;
 })();
 /*</ltIE9>*/
 
@@ -3333,7 +3560,7 @@ try {
 	input.value = '';
 	input.type = 'email';
 	html5InputSupport = input.type == 'email';
-} catch(e){}
+} catch (e){}
 
 input = null;
 
@@ -3363,9 +3590,9 @@ var hasCloneBug = (function(test){
 var hasClassList = !!document.createElement('div').classList;
 
 var classes = function(className){
-	var classNames = (className || '').clean().split(" "), uniques = {};
+	var classNames = (className || '').clean().split(' '), uniques = {};
 	return classNames.filter(function(className){
-		if (className !== "" && !uniques[className]) return uniques[className] = className;
+		if (className !== '' && !uniques[className]) return uniques[className] = className;
 	});
 };
 
@@ -3429,7 +3656,7 @@ Element.implement({
 	},
 
 	getProperties: function(){
-		var args = Array.from(arguments);
+		var args = Array.convert(arguments);
 		return args.map(this.getProperty, this).associate(args);
 	},
 
@@ -3528,7 +3755,7 @@ Element.implement({
 
 	getSelected: function(){
 		this.selectedIndex; // Safari 3.2.1
-		return new Elements(Array.from(this.options).filter(function(option){
+		return new Elements(Array.convert(this.options).filter(function(option){
 			return option.selected;
 		}));
 	},
@@ -3544,7 +3771,7 @@ Element.implement({
 				return document.id(opt).get('value');
 			}) : ((type == 'radio' || type == 'checkbox') && !el.checked) ? null : el.get('value');
 
-			Array.from(value).each(function(val){
+			Array.convert(value).each(function(val){
 				if (typeof val != 'undefined') queryString.push(encodeURIComponent(el.name) + '=' + encodeURIComponent(val));
 			});
 		});
@@ -3552,7 +3779,6 @@ Element.implement({
 	}
 
 });
-
 
 // appendHTML
 
@@ -3613,7 +3839,7 @@ Element.implement({
 	},
 
 	empty: function(){
-		Array.from(this.childNodes).each(Element.dispose);
+		Array.convert(this.childNodes).each(Element.dispose);
 		return this;
 	},
 
@@ -3626,8 +3852,8 @@ Element.implement({
 		var clone = this.cloneNode(contents), ce = [clone], te = [this], i;
 
 		if (contents){
-			ce.append(Array.from(clone.getElementsByTagName('*')));
-			te.append(Array.from(this.getElementsByTagName('*')));
+			ce.append(Array.convert(clone.getElementsByTagName('*')));
+			te.append(Array.convert(this.getElementsByTagName('*')));
 		}
 
 		for (i = ce.length; i--;){
@@ -3754,11 +3980,12 @@ var supportsHTML5Elements = true, supportsTableInnerHTML = true, supportsTRInner
 /*<ltIE9>*/
 // technique by jdbarlett - http://jdbartlett.com/innershiv/
 var div = document.createElement('div');
+var fragment;
 div.innerHTML = '<nav></nav>';
 supportsHTML5Elements = (div.childNodes.length == 1);
 if (!supportsHTML5Elements){
-	var tags = 'abbr article aside audio canvas datalist details figcaption figure footer header hgroup mark meter nav output progress section summary time video'.split(' '),
-		fragment = document.createDocumentFragment(), l = tags.length;
+	var tags = 'abbr article aside audio canvas datalist details figcaption figure footer header hgroup mark meter nav output progress section summary time video'.split(' ');
+	fragment = document.createDocumentFragment(), l = tags.length;
 	while (l--) fragment.createElement(tags[l]);
 }
 div = null;
@@ -3955,7 +4182,7 @@ var floatName = (html.style.cssFloat == null) ? 'styleFloat' : 'cssFloat',
 
 var camelCase = function(property){
 	return property.replace(prefixPattern, '$1-').camelCase();
-}
+};
 
 //<ltIE9>
 var removeStyle = function(style, property){
@@ -3985,7 +4212,7 @@ Element.implement({
 		property = camelCase(property == 'float' ? floatName : property);
 		if (typeOf(value) != 'string'){
 			var map = (Element.Styles[property] || '@').split(' ');
-			value = Array.from(value).map(function(val, i){
+			value = Array.convert(value).map(function(val, i){
 				if (!map[i]) return '';
 				return (typeOf(val) == 'number') ? map[i].replace('@', Math.round(val)) : val;
 			}).join(' ');
@@ -4137,7 +4364,7 @@ Element.Properties.events = {set: function(events){
 					return true;
 				};
 			}
-			if (custom.base) realType = Function.from(custom.base).call(this, type);
+			if (custom.base) realType = Function.convert(custom.base).call(this, type);
 		}
 		var defn = function(){
 			return fn.call(self);
@@ -4168,7 +4395,7 @@ Element.Properties.events = {set: function(events){
 		var custom = Element.Events[type];
 		if (custom){
 			if (custom.onRemove) custom.onRemove.call(this, fn, type);
-			if (custom.base) type = Function.from(custom.base).call(this, type);
+			if (custom.base) type = Function.convert(custom.base).call(this, type);
 		}
 		return (Element.NativeEvents[type]) ? this.removeListener(type, value, arguments[2]) : this;
 	},
@@ -4201,7 +4428,7 @@ Element.Properties.events = {set: function(events){
 	fireEvent: function(type, args, delay){
 		var events = this.retrieve('events');
 		if (!events || !events[type]) return this;
-		args = Array.from(args);
+		args = Array.convert(args);
 
 		events[type].keys.each(function(fn){
 			if (delay) fn.delay(delay, this, args);
@@ -4571,7 +4798,7 @@ Element.implement({
 		try {
 			var bounds = this.getBoundingClientRect();
 			return {x: bounds.width, y: bounds.height};
-		} catch(e) {
+		} catch (e){
 			return {x: 0, y: 0};
 		}
 	},
@@ -4611,14 +4838,14 @@ Element.implement({
 
 		try {
 			return element.offsetParent;
-		} catch(e){}
+		} catch (e){}
 		return null;
 	},
 
 	getOffsets: function(){
 		var hasGetBoundingClientRect = this.getBoundingClientRect;
 //<1.4compat>
-		hasGetBoundingClientRect = hasGetBoundingClientRect && !Browser.Platform.ios
+		hasGetBoundingClientRect = hasGetBoundingClientRect && !Browser.Platform.ios;
 //</1.4compat>
 		if (hasGetBoundingClientRect){
 			var bound = this.getBoundingClientRect(),
@@ -4708,7 +4935,6 @@ Element.implement({
 	}
 
 });
-
 
 [Document, Window].invoke('implement', {
 
@@ -4822,7 +5048,7 @@ description: Contains the basic animation logic to be extended by all other Fx C
 
 license: MIT-style license.
 
-requires: [Chain, Events, Options]
+requires: [Chain, Events, Options, Class.Thenable]
 
 provides: Fx
 
@@ -4833,7 +5059,7 @@ provides: Fx
 
 var Fx = this.Fx = new Class({
 
-	Implements: [Chain, Events, Options],
+	Implements: [Chain, Events, Options, Class.Thenable],
 
 	options: {
 		/*
@@ -4907,6 +5133,9 @@ var Fx = this.Fx = new Class({
 		this.duration = Fx.Durations[duration] || duration.toInt();
 		this.frameInterval = 1000 / fps;
 		this.frames = frames || Math.round(this.duration / this.frameInterval);
+		if (this.getThenableState() !== 'pending'){
+			this.resetThenable(this.subject);
+		}
 		this.fireEvent('start', this.subject);
 		pushInstance.call(this, fps);
 		return this;
@@ -4922,6 +5151,7 @@ var Fx = this.Fx = new Class({
 			} else {
 				this.fireEvent('stop', this.subject);
 			}
+			this.resolve(this.subject === this ? null : this.subject);
 		}
 		return this;
 	},
@@ -4932,6 +5162,7 @@ var Fx = this.Fx = new Class({
 			pullInstance.call(this, this.options.fps);
 			this.frame = this.frames;
 			this.fireEvent('cancel', this.subject).clearChain();
+			this.reject(this.subject);
 		}
 		return this;
 	},
@@ -5020,7 +5251,7 @@ Fx.CSS = new Class({
 	//prepares the base from/to object
 
 	prepare: function(element, property, values){
-		values = Array.from(values);
+		values = Array.convert(values);
 		var from = values[0], to = values[1];
 		if (to == null){
 			to = from;
@@ -5051,12 +5282,12 @@ Fx.CSS = new Class({
 	//parses a value into an array
 
 	parse: function(value){
-		value = Function.from(value)();
-		value = (typeof value == 'string') ? value.split(' ') : Array.from(value);
+		value = Function.convert(value)();
+		value = (typeof value == 'string') ? value.split(' ') : Array.convert(value);
 		return value.map(function(val){
 			val = String(val);
 			var found = false;
-			Object.each(Fx.CSS.Parsers, function(parser, key){
+			Object.each(Fx.CSS.Parsers, function(parser){
 				if (found) return;
 				var parsed = parser.parse(val);
 				if (parsed || parsed === 0) found = {value: parsed, parser: parser};
@@ -5073,7 +5304,7 @@ Fx.CSS = new Class({
 		(Math.min(from.length, to.length)).times(function(i){
 			computed.push({value: from[i].parser.compute(from[i].value, to[i].value, delta), parser: from[i].parser});
 		});
-		computed.$family = Function.from('fx:css:value');
+		computed.$family = Function.convert('fx:css:value');
 		return computed;
 	},
 
@@ -5101,7 +5332,7 @@ Fx.CSS = new Class({
 		var to = {}, selectorTest = new RegExp('^' + selector.escapeRegExp() + '$');
 
 		var searchStyles = function(rules){
-			Array.each(rules, function(rule, i){
+			Array.each(rules, function(rule){
 				if (rule.media){
 					searchStyles(rule.rules || rule.cssRules);
 					return;
@@ -5119,7 +5350,7 @@ Fx.CSS = new Class({
 			});
 		};
 
-		Array.each(document.styleSheets, function(sheet, j){
+		Array.each(document.styleSheets, function(sheet){
 			var href = sheet.href;
 			if (href && href.indexOf('://') > -1 && href.indexOf(document.domain) == -1) return;
 			var rules = sheet.rules || sheet.cssRules;
@@ -5158,7 +5389,7 @@ Fx.CSS.Parsers = {
 	},
 
 	String: {
-		parse: Function.from(false),
+		parse: Function.convert(false),
 		compute: function(zero, one){
 			return one;
 		},
@@ -5238,7 +5469,7 @@ Element.implement({
 		return this;
 	},
 
-	fade: function(how){
+	fade: function(){
 		var fade = this.get('tween'), method, args = ['opacity'].append(arguments), toggle;
 		if (args[1] == null) args[1] = 'toggle';
 		switch (args[1]){
@@ -5252,7 +5483,7 @@ Element.implement({
 				args[1] = flag ? 0 : 1;
 				this.store('fade:flag', !flag);
 				toggle = true;
-			break;
+				break;
 			default: method = 'start';
 		}
 		if (!toggle) this.eliminate('fade:flag');
@@ -5409,7 +5640,7 @@ Fx.implement({
 });
 
 Fx.Transition = function(transition, params){
-	params = Array.from(params);
+	params = Array.convert(params);
 	var easeIn = function(pos){
 		return transition(pos, params);
 	};
@@ -5491,7 +5722,7 @@ description: Powerful all purpose Request Class. Uses XMLHTTPRequest.
 
 license: MIT-style license.
 
-requires: [Object, Element, Chain, Events, Options, Browser]
+requires: [Object, Element, Chain, Events, Options, Class.Thenable, Browser]
 
 provides: Request
 
@@ -5505,7 +5736,7 @@ var empty = function(){},
 
 var Request = this.Request = new Class({
 
-	Implements: [Chain, Events, Options],
+	Implements: [Chain, Events, Options, Class.Thenable],
 
 	options: {/*
 		onRequest: function(){},
@@ -5585,6 +5816,7 @@ var Request = this.Request = new Class({
 
 	success: function(text, xml){
 		this.onSuccess(this.processScripts(text), xml);
+		this.resolve({text: text, xml: xml});
 	},
 
 	onSuccess: function(){
@@ -5593,6 +5825,7 @@ var Request = this.Request = new Class({
 
 	failure: function(){
 		this.onFailure();
+		this.reject({reason: 'failure', xhr: this.xhr});
 	},
 
 	onFailure: function(){
@@ -5609,6 +5842,7 @@ var Request = this.Request = new Class({
 
 	timeout: function(){
 		this.fireEvent('timeout', this.xhr);
+		this.reject({reason: 'timeout', xhr: this.xhr});
 	},
 
 	setHeader: function(name, value){
@@ -5694,9 +5928,13 @@ var Request = this.Request = new Class({
 				xhr.setRequestHeader(key, value);
 			} catch (e){
 				this.fireEvent('exception', [key, value]);
+				this.reject({reason: 'exception', xhr: xhr, exception: e});
 			}
 		}, this);
 
+		if (this.getThenableState() !== 'pending'){
+			this.resetThenable({reason: 'send'});
+		}
 		this.fireEvent('request');
 		xhr.send(data);
 		if (!this.options.async) this.onStateChange();
@@ -5717,6 +5955,7 @@ var Request = this.Request = new Class({
 		if (progressSupport) xhr.onprogress = xhr.onloadstart = empty;
 		this.xhr = new Browser.Request();
 		this.fireEvent('cancel');
+		this.reject({reason: 'cancel', xhr: xhr});
 		return this;
 	}
 
@@ -5825,6 +6064,7 @@ Request.HTML = new Class({
 		if (options.evalScripts) Browser.exec(response.javascript);
 
 		this.onSuccess(response.tree, response.elements, response.html, response.javascript);
+		this.resolve({tree: response.tree, elements: response.elements, html: response.html, javascript: response.javascript});
 	}
 
 });
@@ -5977,8 +6217,12 @@ Request.JSON = new Class({
 			this.fireEvent('error', [text, error]);
 			return;
 		}
-		if (json == null) this.onFailure();
-		else this.onSuccess(json, text);
+		if (json == null){
+			this.failure();
+		} else {
+			this.onSuccess(json, text);
+			this.resolve({json: json, text: text});
+		}
 	}
 
 });
@@ -6087,7 +6331,7 @@ var ready,
 
 var domready = function(){
 	clearTimeout(timer);
-	if (!ready) {
+	if (!ready){
 		Browser.loaded = ready = true;
 		document.removeListener('DOMContentLoaded', domready).removeListener('readystatechange', check);
 		document.fireEvent('domready');
@@ -6172,7 +6416,7 @@ window.addEvent('load', function(){
 MooTools: the javascript framework
 
 web build:
- - http://mootools.net/more/c619d3650feb28db08dc541badaf43d5
+ - http://mootools.net/more/builder/8cfff4ee9517a6a5d2b33b380a2111fa
 
 packager build:
  - packager build More/More More/Class.Refactor More/Class.Binds More/Class.Occlude More/Chain.Wait More/Array.Extras More/Date More/Date.Extras More/String.Extras More/String.QueryString More/URI More/URI.Relative More/Hash.Extras More/Elements.From More/Element.Measure More/Element.Position More/Element.Shortcuts More/Form.Request More/Form.Request.Append More/OverText More/Fx.Elements More/Fx.Accordion More/Fx.Scroll More/Fx.Slide More/Fx.SmoothScroll More/Fx.Sort More/Drag More/Drag.Move More/Sortables More/Assets More/Color More/Hash.Cookie More/Swiff More/Keyboard More/Keyboard.Extras More/Scroller More/Tips More/Locale
@@ -6210,8 +6454,8 @@ provides: [MooTools.More]
 */
 
 MooTools.More = {
-	version: '1.5.2',
-	build: 'facdf0458d10fd214aa9f5fa71935a23a772cc48'
+	version: '1.6.0',
+	build: '45b71db70f879781a7e0b0d3fb3bb1307c2521eb'
 };
 
 /*
@@ -6281,12 +6525,12 @@ provides: [Class.Binds]
 
 Class.Mutators.Binds = function(binds){
 	if (!this.prototype.initialize) this.implement('initialize', function(){});
-	return Array.from(binds).concat(this.prototype.Binds || []);
+	return Array.convert(binds).concat(this.prototype.Binds || []);
 };
 
 Class.Mutators.initialize = function(initialize){
 	return function(){
-		Array.from(this.Binds).each(function(name){
+		Array.convert(this.Binds).each(function(name){
 			var original = this[name];
 			if (original) this[name] = original.bind(this);
 		}, this);
@@ -6360,40 +6604,40 @@ provides: [Chain.Wait]
 
 (function(){
 
-	var wait = {
-		wait: function(duration){
-			return this.chain(function(){
-				this.callChain.delay(duration == null ? 500 : duration, this);
-				return this;
-			}.bind(this));
-		}
-	};
-
-	Chain.implement(wait);
-
-	if (this.Fx) Fx.implement(wait);
-
-	if (this.Element && Element.implement && this.Fx){
-		Element.implement({
-
-			chains: function(effects){
-				Array.from(effects || ['tween', 'morph', 'reveal']).each(function(effect){
-					effect = this.get(effect);
-					if (!effect) return;
-					effect.setOptions({
-						link:'chain'
-					});
-				}, this);
-				return this;
-			},
-
-			pauseFx: function(duration, effect){
-				this.chains(effect).get(effect || 'tween').wait(duration);
-				return this;
-			}
-
-		});
+var wait = {
+	wait: function(duration){
+		return this.chain(function(){
+			this.callChain.delay(duration == null ? 500 : duration, this);
+			return this;
+		}.bind(this));
 	}
+};
+
+Chain.implement(wait);
+
+if (this.Fx) Fx.implement(wait);
+
+if (this.Element && Element.implement && this.Fx){
+	Element.implement({
+
+		chains: function(effects){
+			Array.convert(effects || ['tween', 'morph', 'reveal']).each(function(effect){
+				effect = this.get(effect);
+				if (!effect) return;
+				effect.setOptions({
+					link:'chain'
+				});
+			}, this);
+			return this;
+		},
+
+		pauseFx: function(duration, effect){
+			this.chains(effect).get(effect || 'tween').wait(duration);
+			return this;
+		}
+
+	});
+}
 
 })();
 
@@ -6673,7 +6917,7 @@ Locale.Set = new Class({
 		var value = Object.getFromPath(this.sets, key);
 		if (value != null){
 			var type = typeOf(value);
-			if (type == 'function') value = value.apply(null, Array.from(args));
+			if (type == 'function') value = value.apply(null, Array.convert(args));
 			else if (type == 'object') value = Object.clone(value);
 			return value;
 		}
@@ -6699,7 +6943,7 @@ Locale.Set = new Class({
 	},
 
 	inherit: function(names, set){
-		names = Array.from(names);
+		names = Array.convert(names);
 
 		if (set && !this.inherits.sets[set]) this.inherits.sets[set] = [];
 
@@ -6827,9 +7071,11 @@ var DateMethods = Date.Methods = {
 	hr: 'Hours'
 };
 
-['Date', 'Day', 'FullYear', 'Hours', 'Milliseconds', 'Minutes', 'Month', 'Seconds', 'Time', 'TimezoneOffset',
+[
+	'Date', 'Day', 'FullYear', 'Hours', 'Milliseconds', 'Minutes', 'Month', 'Seconds', 'Time', 'TimezoneOffset',
 	'Week', 'Timezone', 'GMTOffset', 'DayOfYear', 'LastMonth', 'LastDayOfMonth', 'UTCDate', 'UTCDay', 'UTCFullYear',
-	'AMPM', 'Ordinal', 'UTCHours', 'UTCMilliseconds', 'UTCMinutes', 'UTCMonth', 'UTCSeconds', 'UTCMilliseconds'].each(function(method){
+	'AMPM', 'Ordinal', 'UTCHours', 'UTCMilliseconds', 'UTCMinutes', 'UTCMonth', 'UTCSeconds', 'UTCMilliseconds'
+].each(function(method){
 	Date.Methods[method.toLowerCase()] = method;
 });
 
@@ -7115,12 +7361,12 @@ Date.extend({
 	},
 
 	units: {
-		ms: Function.from(1),
-		second: Function.from(1000),
-		minute: Function.from(60000),
-		hour: Function.from(3600000),
-		day: Function.from(86400000),
-		week: Function.from(608400000),
+		ms: Function.convert(1),
+		second: Function.convert(1000),
+		minute: Function.convert(60000),
+		hour: Function.convert(3600000),
+		day: Function.convert(86400000),
+		week: Function.convert(608400000),
 		month: function(month, year){
 			var d = new Date;
 			return Date.daysInMonth(month != null ? month : d.get('mo'), year != null ? year : d.get('year')) * 86400000;
@@ -7262,13 +7508,13 @@ var build = function(format){
 
 	var parsed = [];
 	var re = (format.source || format) // allow format to be regex
-	 .replace(/%([a-z])/gi,
+	.replace(/%([a-z])/gi,
 		function($0, $1){
 			return replacers($1) || $0;
 		}
 	).replace(/\((?!\?)/g, '(?:') // make all groups non-capturing
-	 .replace(/ (?!\?|\*)/g, ',? ') // be forgiving with spaces and commas
-	 .replace(/%([a-z%])/gi,
+	.replace(/ (?!\?|\*)/g, ',? ') // be forgiving with spaces and commas
+	.replace(/%([a-z%])/gi,
 		function($0, $1){
 			var p = keys[$1];
 			if (!p) return $1;
@@ -7490,66 +7736,66 @@ provides: [String.Extras]
 (function(){
 
 var special = {
-	'a': /[àáâãäåăą]/g,
-	'A': /[ÀÁÂÃÄÅĂĄ]/g,
-	'c': /[ćčç]/g,
-	'C': /[ĆČÇ]/g,
-	'd': /[ďđ]/g,
-	'D': /[ĎÐ]/g,
-	'e': /[èéêëěę]/g,
-	'E': /[ÈÉÊËĚĘ]/g,
-	'g': /[ğ]/g,
-	'G': /[Ğ]/g,
-	'i': /[ìíîï]/g,
-	'I': /[ÌÍÎÏ]/g,
-	'l': /[ĺľł]/g,
-	'L': /[ĹĽŁ]/g,
-	'n': /[ñňń]/g,
-	'N': /[ÑŇŃ]/g,
-	'o': /[òóôõöøő]/g,
-	'O': /[ÒÓÔÕÖØ]/g,
-	'r': /[řŕ]/g,
-	'R': /[ŘŔ]/g,
-	's': /[ššş]/g,
-	'S': /[ŠŞŚ]/g,
-	't': /[ťţ]/g,
-	'T': /[ŤŢ]/g,
-	'u': /[ùúûůüµ]/g,
-	'U': /[ÙÚÛŮÜ]/g,
-	'y': /[ÿý]/g,
-	'Y': /[ŸÝ]/g,
-	'z': /[žźż]/g,
-	'Z': /[ŽŹŻ]/g,
-	'th': /[þ]/g,
-	'TH': /[Þ]/g,
-	'dh': /[ð]/g,
-	'DH': /[Ð]/g,
-	'ss': /[ß]/g,
-	'oe': /[œ]/g,
-	'OE': /[Œ]/g,
-	'ae': /[æ]/g,
-	'AE': /[Æ]/g
-},
+		'a': /[àáâãäåăą]/g,
+		'A': /[ÀÁÂÃÄÅĂĄ]/g,
+		'c': /[ćčç]/g,
+		'C': /[ĆČÇ]/g,
+		'd': /[ďđ]/g,
+		'D': /[ĎÐ]/g,
+		'e': /[èéêëěę]/g,
+		'E': /[ÈÉÊËĚĘ]/g,
+		'g': /[ğ]/g,
+		'G': /[Ğ]/g,
+		'i': /[ìíîï]/g,
+		'I': /[ÌÍÎÏ]/g,
+		'l': /[ĺľł]/g,
+		'L': /[ĹĽŁ]/g,
+		'n': /[ñňń]/g,
+		'N': /[ÑŇŃ]/g,
+		'o': /[òóôõöøő]/g,
+		'O': /[ÒÓÔÕÖØ]/g,
+		'r': /[řŕ]/g,
+		'R': /[ŘŔ]/g,
+		's': /[ššş]/g,
+		'S': /[ŠŞŚ]/g,
+		't': /[ťţ]/g,
+		'T': /[ŤŢ]/g,
+		'u': /[ùúûůüµ]/g,
+		'U': /[ÙÚÛŮÜ]/g,
+		'y': /[ÿý]/g,
+		'Y': /[ŸÝ]/g,
+		'z': /[žźż]/g,
+		'Z': /[ŽŹŻ]/g,
+		'th': /[þ]/g,
+		'TH': /[Þ]/g,
+		'dh': /[ð]/g,
+		'DH': /[Ð]/g,
+		'ss': /[ß]/g,
+		'oe': /[œ]/g,
+		'OE': /[Œ]/g,
+		'ae': /[æ]/g,
+		'AE': /[Æ]/g
+	},
 
-tidy = {
-	' ': /[\xa0\u2002\u2003\u2009]/g,
-	'*': /[\xb7]/g,
-	'\'': /[\u2018\u2019]/g,
-	'"': /[\u201c\u201d]/g,
-	'...': /[\u2026]/g,
-	'-': /[\u2013]/g,
-//	'--': /[\u2014]/g,
-	'&raquo;': /[\uFFFD]/g
-},
+	tidy = {
+		' ': /[\xa0\u2002\u2003\u2009]/g,
+		'*': /[\xb7]/g,
+		'\'': /[\u2018\u2019]/g,
+		'"': /[\u201c\u201d]/g,
+		'...': /[\u2026]/g,
+		'-': /[\u2013]/g,
+	//	'--': /[\u2014]/g,
+		'&raquo;': /[\uFFFD]/g
+	},
 
-conversions = {
-	ms: 1,
-	s: 1000,
-	m: 6e4,
-	h: 36e5
-},
+	conversions = {
+		ms: 1,
+		s: 1000,
+		m: 6e4,
+		h: 36e5
+	},
 
-findUnits = /(\d*.?\d+)([msh]+)/;
+	findUnits = /(\d*.?\d+)([msh]+)/;
 
 var walk = function(string, replacements){
 	var result = string, key;
@@ -7558,9 +7804,9 @@ var walk = function(string, replacements){
 };
 
 var getRegexForTag = function(tag, contents){
-	tag = tag || '';
-	var regstr = contents ? "<" + tag + "(?!\\w)[^>]*>([\\s\\S]*?)<\/" + tag + "(?!\\w)>" : "<\/?" + tag + "([^>]+)?>";
-	return new RegExp(regstr, "gi");
+	tag = tag || (contents ? '' : '\\w+');
+	var regstr = contents ? '<' + tag + '(?!\\w)[^>]*>([\\s\\S]*?)<\/' + tag + '(?!\\w)>' : '<\/?' + tag + '\/?>|<' + tag + '[\\s|\/][^>]*>';
+	return new RegExp(regstr, 'gi');
 };
 
 String.implement({
@@ -7613,7 +7859,7 @@ String.implement({
 	},
 
 	ms: function(){
-	  // "Borrowed" from https://gist.github.com/1503944
+		// "Borrowed" from https://gist.github.com/1503944
 		var units = findUnits.exec(this);
 		if (units == null) return Number(this);
 		return Number(units[1]) * conversions[units[2]];
@@ -7751,7 +7997,7 @@ var URI = this.URI = new Class({
 		/*base: false*/
 	},
 
-	regex: /^(?:(\w+):)?(?:\/\/(?:(?:([^:@\/]*):?([^:@\/]*))?@)?([^:\/?#]*)(?::(\d*))?)?(\.\.?$|(?:[^?#\/]*\/)*)([^?#]*)(?:\?([^#]*))?(?:#(.*))?/,
+	regex: /^(?:(\w+):)?(?:\/\/(?:(?:([^:@\/]*):?([^:@\/]*))?@)?(\[[A-Fa-f0-9:]+\]|[^:\/?#]*)(?::(\d*))?)?(\.\.?$|(?:[^?#\/]*\/)*)([^?#]*)(?:\?([^#]*))?(?:#(.*))?/,
 	parts: ['scheme', 'user', 'password', 'host', 'port', 'directory', 'file', 'query', 'fragment'],
 	schemes: {http: 80, https: 443, ftp: 21, rtsp: 554, mms: 1755, file: 0},
 
@@ -7868,7 +8114,7 @@ URI.regs = {
 	directoryDot: /\.\/|\.$/
 };
 
-URI.base = new URI(Array.from(document.getElements('base[href]', true)).getLast(), {base: document.location});
+URI.base = new URI(Array.convert(document.getElements('base[href]', true)).getLast(), {base: document.location});
 
 String.implement({
 
@@ -7893,7 +8139,6 @@ license: MIT-style license
 
 authors:
   - Sebastian Markbåge
-
 
 requires:
   - Class.refactor
@@ -8080,7 +8325,6 @@ Hash.implement({
 
 Hash.alias({indexOf: 'keyOf', contains: 'hasValue'});
 
-
 })();
 
 /*
@@ -8215,7 +8459,6 @@ var isVisible = function(el){
 	return !!(!el || el.offsetHeight || el.offsetWidth);
 };
 
-
 Element.implement({
 
 	measure: function(fn){
@@ -8265,17 +8508,16 @@ Element.implement({
 		} else if (parent){
 			try { //safari sometimes crashes here, so catch it
 				dim = getSize(this, options);
-			}catch(e){}
+			} catch (e){}
 		}
 
 		return Object.append(dim, (dim.x || dim.x === 0) ? {
-				width: dim.x,
-				height: dim.y
-			} : {
-				x: dim.width,
-				y: dim.height
-			}
-		);
+			width: dim.x,
+			height: dim.y
+		} : {
+			x: dim.width,
+			y: dim.height
+		});
 	},
 
 	getComputedSize: function(options){
@@ -8463,13 +8705,13 @@ var local = Element.Position = {
 			left = calc.x,
 			winSize = window.getSize();
 
-		switch(options.position.x){
+		switch (options.position.x){
 			case 'left': position.x = left + offsetX; break;
 			case 'right': position.x = left + offsetX + relativeTo.offsetWidth; break;
 			default: position.x = left + ((relativeTo == document.body ? winSize.x : relativeTo.offsetWidth) / 2) + offsetX; break;
 		}
 
-		switch(options.position.y){
+		switch (options.position.y){
 			case 'top': position.y = top + offsetY; break;
 			case 'bottom': position.y = top + offsetY + relativeTo.offsetHeight; break;
 			default: position.y = top + ((relativeTo == document.body ? winSize.y : relativeTo.offsetHeight) / 2) + offsetY; break;
@@ -8517,14 +8759,14 @@ var local = Element.Position = {
 			dimensions = options.dimensions,
 			edge = options.edge;
 
-		switch(edge.x){
+		switch (edge.x){
 			case 'left': edgeOffset.x = 0; break;
 			case 'right': edgeOffset.x = -dimensions.x - dimensions.computedRight - dimensions.computedLeft; break;
 			// center
 			default: edgeOffset.x = -(Math.round(dimensions.totalWidth / 2)); break;
 		}
 
-		switch(edge.y){
+		switch (edge.y){
 			case 'top': edgeOffset.y = 0; break;
 			case 'bottom': edgeOffset.y = -dimensions.y - dimensions.computedTop - dimensions.computedBottom; break;
 			// center
@@ -8611,7 +8853,7 @@ Element.implement({
 		try {
 			//IE fails here if the element is not in the dom
 			d = this.getStyle('display');
-		} catch(e){}
+		} catch (e){}
 		if (d == 'none') return this;
 		return this.store('element:_originalDisplay', d || '').setStyle('display', 'none');
 	},
@@ -8638,7 +8880,7 @@ Document.implement({
 			try {
 				//IE fails here if selected element is not in dom
 				document.selection.empty();
-			} catch(e){}
+			} catch (e){}
 		}
 	}
 
@@ -8734,7 +8976,7 @@ var IframeShim = this.IframeShim = new Class({
 			if (!IframeShim.ready) window.addEvent('load', inject);
 			else inject();
 		} else {
-			this.position = this.hide = this.show = this.dispose = Function.from(this);
+			this.position = this.hide = this.show = this.dispose = Function.convert(this);
 		}
 	},
 
@@ -9449,176 +9691,176 @@ if (!window.Form) window.Form = {};
 
 (function(){
 
-	Form.Request = new Class({
+Form.Request = new Class({
 
-		Binds: ['onSubmit', 'onFormValidate'],
+	Binds: ['onSubmit', 'onFormValidate'],
 
-		Implements: [Options, Events, Class.Occlude],
+	Implements: [Options, Events, Class.Occlude],
 
-		options: {/*
-			onFailure: function(){},
-			onSuccess: function(){}, // aliased to onComplete,
-			onSend: function(){}*/
-			requestOptions: {
-				evalScripts: true,
-				useSpinner: true,
-				emulation: false,
-				link: 'ignore'
-			},
-			sendButtonClicked: true,
-			extraData: {},
-			resetForm: true
+	options: {/*
+		onFailure: function(){},
+		onSuccess: function(){}, // aliased to onComplete,
+		onSend: function(){}*/
+		requestOptions: {
+			evalScripts: true,
+			useSpinner: true,
+			emulation: false,
+			link: 'ignore'
 		},
+		sendButtonClicked: true,
+		extraData: {},
+		resetForm: true
+	},
 
-		property: 'form.request',
+	property: 'form.request',
 
-		initialize: function(form, target, options){
-			this.element = document.id(form);
-			if (this.occlude()) return this.occluded;
-			this.setOptions(options)
-				.setTarget(target)
-				.attach();
-		},
+	initialize: function(form, target, options){
+		this.element = document.id(form);
+		if (this.occlude()) return this.occluded;
+		this.setOptions(options)
+			.setTarget(target)
+			.attach();
+	},
 
-		setTarget: function(target){
-			this.target = document.id(target);
-			if (!this.request){
-				this.makeRequest();
-			} else {
-				this.request.setOptions({
-					update: this.target
-				});
-			}
-			return this;
-		},
-
-		toElement: function(){
-			return this.element;
-		},
-
-		makeRequest: function(){
-			var self = this;
-			this.request = new Request.HTML(Object.merge({
-					update: this.target,
-					emulation: false,
-					spinnerTarget: this.element,
-					method: this.element.get('method') || 'post'
-			}, this.options.requestOptions)).addEvents({
-				success: function(tree, elements, html, javascript){
-					['complete', 'success'].each(function(evt){
-						self.fireEvent(evt, [self.target, tree, elements, html, javascript]);
-					});
-				},
-				failure: function(){
-					self.fireEvent('complete', arguments).fireEvent('failure', arguments);
-				},
-				exception: function(){
-					self.fireEvent('failure', arguments);
-				}
-			});
-			return this.attachReset();
-		},
-
-		attachReset: function(){
-			if (!this.options.resetForm) return this;
-			this.request.addEvent('success', function(){
-				Function.attempt(function(){
-					this.element.reset();
-				}.bind(this));
-				if (window.OverText) OverText.update();
-			}.bind(this));
-			return this;
-		},
-
-		attach: function(attach){
-			var method = (attach != false) ? 'addEvent' : 'removeEvent';
-			this.element[method]('click:relay(button, input[type=submit])', this.saveClickedButton.bind(this));
-
-			var fv = this.element.retrieve('validator');
-			if (fv) fv[method]('onFormValidate', this.onFormValidate);
-			else this.element[method]('submit', this.onSubmit);
-
-			return this;
-		},
-
-		detach: function(){
-			return this.attach(false);
-		},
-
-		//public method
-		enable: function(){
-			return this.attach();
-		},
-
-		//public method
-		disable: function(){
-			return this.detach();
-		},
-
-		onFormValidate: function(valid, form, event){
-			//if there's no event, then this wasn't a submit event
-			if (!event) return;
-			var fv = this.element.retrieve('validator');
-			if (valid || (fv && !fv.options.stopOnFailure)){
-				event.stop();
-				this.send();
-			}
-		},
-
-		onSubmit: function(event){
-			var fv = this.element.retrieve('validator');
-			if (fv){
-				//form validator was created after Form.Request
-				this.element.removeEvent('submit', this.onSubmit);
-				fv.addEvent('onFormValidate', this.onFormValidate);
-				fv.validate(event);
-				return;
-			}
-			if (event) event.stop();
-			this.send();
-		},
-
-		saveClickedButton: function(event, target){
-			var targetName = target.get('name');
-			if (!targetName || !this.options.sendButtonClicked) return;
-			this.options.extraData[targetName] = target.get('value') || true;
-			this.clickedCleaner = function(){
-				delete this.options.extraData[targetName];
-				this.clickedCleaner = function(){};
-			}.bind(this);
-		},
-
-		clickedCleaner: function(){},
-
-		send: function(){
-			var str = this.element.toQueryString().trim(),
-				data = Object.toQueryString(this.options.extraData);
-
-			if (str) str += "&" + data;
-			else str = data;
-
-			this.fireEvent('send', [this.element, str.parseQueryString()]);
-			this.request.send({
-				data: str,
-				url: this.options.requestOptions.url || this.element.get('action')
-			});
-			this.clickedCleaner();
-			return this;
-		}
-
-	});
-
-	Element.implement('formUpdate', function(update, options){
-		var fq = this.retrieve('form.request');
-		if (!fq){
-			fq = new Form.Request(this, update, options);
+	setTarget: function(target){
+		this.target = document.id(target);
+		if (!this.request){
+			this.makeRequest();
 		} else {
-			if (update) fq.setTarget(update);
-			if (options) fq.setOptions(options).makeRequest();
+			this.request.setOptions({
+				update: this.target
+			});
 		}
-		fq.send();
 		return this;
-	});
+	},
+
+	toElement: function(){
+		return this.element;
+	},
+
+	makeRequest: function(){
+		var self = this;
+		this.request = new Request.HTML(Object.merge({
+			update: this.target,
+			emulation: false,
+			spinnerTarget: this.element,
+			method: this.element.get('method') || 'post'
+		}, this.options.requestOptions)).addEvents({
+			success: function(tree, elements, html, javascript){
+				['complete', 'success'].each(function(evt){
+					self.fireEvent(evt, [self.target, tree, elements, html, javascript]);
+				});
+			},
+			failure: function(){
+				self.fireEvent('complete', arguments).fireEvent('failure', arguments);
+			},
+			exception: function(){
+				self.fireEvent('failure', arguments);
+			}
+		});
+		return this.attachReset();
+	},
+
+	attachReset: function(){
+		if (!this.options.resetForm) return this;
+		this.request.addEvent('success', function(){
+			Function.attempt(function(){
+				this.element.reset();
+			}.bind(this));
+			if (window.OverText) OverText.update();
+		}.bind(this));
+		return this;
+	},
+
+	attach: function(attach){
+		var method = (attach != false) ? 'addEvent' : 'removeEvent';
+		this.element[method]('click:relay(button, input[type=submit])', this.saveClickedButton.bind(this));
+
+		var fv = this.element.retrieve('validator');
+		if (fv) fv[method]('onFormValidate', this.onFormValidate);
+		else this.element[method]('submit', this.onSubmit);
+
+		return this;
+	},
+
+	detach: function(){
+		return this.attach(false);
+	},
+
+	//public method
+	enable: function(){
+		return this.attach();
+	},
+
+	//public method
+	disable: function(){
+		return this.detach();
+	},
+
+	onFormValidate: function(valid, form, event){
+		//if there's no event, then this wasn't a submit event
+		if (!event) return;
+		var fv = this.element.retrieve('validator');
+		if (valid || (fv && !fv.options.stopOnFailure)){
+			event.stop();
+			this.send();
+		}
+	},
+
+	onSubmit: function(event){
+		var fv = this.element.retrieve('validator');
+		if (fv){
+			//form validator was created after Form.Request
+			this.element.removeEvent('submit', this.onSubmit);
+			fv.addEvent('onFormValidate', this.onFormValidate);
+			fv.validate(event);
+			return;
+		}
+		if (event) event.stop();
+		this.send();
+	},
+
+	saveClickedButton: function(event, target){
+		var targetName = target.get('name');
+		if (!targetName || !this.options.sendButtonClicked) return;
+		this.options.extraData[targetName] = target.get('value') || true;
+		this.clickedCleaner = function(){
+			delete this.options.extraData[targetName];
+			this.clickedCleaner = function(){};
+		}.bind(this);
+	},
+
+	clickedCleaner: function(){},
+
+	send: function(){
+		var str = this.element.toQueryString().trim(),
+			data = Object.toQueryString(this.options.extraData);
+
+		if (str) str += '&' + data;
+		else str = data;
+
+		this.fireEvent('send', [this.element, str.parseQueryString()]);
+		this.request.send({
+			data: str,
+			url: this.options.requestOptions.url || this.element.get('action')
+		});
+		this.clickedCleaner();
+		return this;
+	}
+
+});
+
+Element.implement('formUpdate', function(update, options){
+	var fq = this.retrieve('form.request');
+	if (!fq){
+		fq = new Form.Request(this, update, options);
+	} else {
+		if (update) fq.setTarget(update);
+		if (options) fq.setOptions(options).makeRequest();
+	}
+	fq.send();
+	return this;
+});
 
 })();
 
@@ -9648,7 +9890,6 @@ provides: [Fx.Reveal]
 
 (function(){
 
-
 var hideTheseOf = function(object){
 	var hideThese = object.options.hideInputs;
 	if (window.OverText){
@@ -9660,7 +9901,6 @@ var hideTheseOf = function(object){
 	}
 	return (hideThese) ? object.element.getElements(hideThese) : null;
 };
-
 
 Fx.Reveal = new Class({
 
@@ -9703,7 +9943,7 @@ Fx.Reveal = new Class({
 				});
 
 				this.element.setStyles({
-					display: Function.from(this.options.display).call(this),
+					display: Function.convert(this.options.display).call(this),
 					overflow: 'hidden'
 				});
 
@@ -9760,7 +10000,7 @@ Fx.Reveal = new Class({
 
 				var zero = {
 					height: 0,
-					display: Function.from(this.options.display).call(this)
+					display: Function.convert(this.options.display).call(this)
 				};
 				Object.each(startStyles, function(style, name){
 					zero[name] = 0;
@@ -9774,7 +10014,7 @@ Fx.Reveal = new Class({
 
 				this.$chain.unshift(function(){
 					this.element.style.cssText = this.cssText;
-					this.element.setStyle('display', Function.from(this.options.display).call(this));
+					this.element.setStyle('display', Function.convert(this.options.display).call(this));
 					if (!this.hidden) this.showing = false;
 					if (hideThese) hideThese.setStyle('visibility', 'visible');
 					this.callChain();
@@ -9906,20 +10146,19 @@ Form.Request.Append = new Class({
 
 	makeRequest: function(){
 		this.request = new Request.HTML(Object.merge({
-				url: this.element.get('action'),
-				method: this.element.get('method') || 'post',
-				spinnerTarget: this.element
-			}, this.options.requestOptions, {
-				evalScripts: false
-			})
-		).addEvents({
+			url: this.element.get('action'),
+			method: this.element.get('method') || 'post',
+			spinnerTarget: this.element
+		}, this.options.requestOptions, {
+			evalScripts: false
+		})).addEvents({
 			success: function(tree, elements, html, javascript){
 				var container;
 				var kids = Elements.from(html);
 				if (kids.length == 1){
 					container = kids[0];
 				} else {
-					 container = new Element('div', {
+					container = new Element('div', {
 						styles: {
 							display: 'none'
 						}
@@ -10134,7 +10373,7 @@ var OverText = this.OverText = new Class({
 				try {
 					this.element.fireEvent('focus');
 					this.element.focus();
-				} catch(e){} //IE barfs if you call focus on hidden elements
+				} catch (e){} //IE barfs if you call focus on hidden elements
 			}
 		}
 		return this;
@@ -10322,7 +10561,8 @@ Fx.Accordion = new Class({
 		alwaysHide: false,
 		trigger: 'click',
 		initialDisplayFx: true,
-		resetHeight: true
+		resetHeight: true,
+		keepOpen: false
 	},
 
 	initialize: function(){
@@ -10444,11 +10684,13 @@ Fx.Accordion = new Class({
 		var obj = {},
 			elements = this.elements,
 			options = this.options,
-			effects = this.effects;
+			effects = this.effects,
+			keepOpen = options.keepOpen,
+			alwaysHide = options.alwaysHide;
 
 		if (useFx == null) useFx = true;
 		if (typeOf(index) == 'element') index = elements.indexOf(index);
-		if (index == this.current && !options.alwaysHide) return this;
+		if (index == this.current && !alwaysHide && !keepOpen) return this;
 
 		if (options.resetHeight){
 			var prev = elements[this.current];
@@ -10457,7 +10699,7 @@ Fx.Accordion = new Class({
 			}
 		}
 
-		if ((this.timer && options.link == 'chain') || (index === this.current && !options.alwaysHide)) return this;
+		if (this.timer && options.link == 'chain') return this;
 
 		if (this.current != null) this.previous = this.current;
 		this.current = index;
@@ -10465,16 +10707,20 @@ Fx.Accordion = new Class({
 
 		elements.each(function(el, i){
 			obj[i] = {};
-			var hide;
-			if (i != index){
-				hide = true;
-			} else if (options.alwaysHide && ((el.offsetHeight > 0 && options.height) || el.offsetWidth > 0 && options.width)){
-				hide = true;
-				this.selfHidden = true;
+			var hide, isOpen;
+			if (!keepOpen || i == index){
+				if (i == index) isOpen = (el.offsetHeight > 0 && options.height) || (el.offsetWidth > 0 && options.width);
+
+				if (i != index){
+					hide = true;
+				} else if ((alwaysHide || keepOpen) && isOpen){
+					hide = true;
+					this.selfHidden = true;
+				}
+				this.fireEvent(hide ? 'background' : 'active', [this.togglers[i], el]);
+				for (var fx in effects) obj[i][fx] = hide ? 0 : el[effects[fx]];
+				if (!useFx && !hide && options.resetHeight) obj[i].height = 'auto';
 			}
-			this.fireEvent(hide ? 'background' : 'active', [this.togglers[i], el]);
-			for (var fx in effects) obj[i][fx] = hide ? 0 : el[effects[fx]];
-			if (!useFx && !hide && options.resetHeight) obj[i].height = 'auto';
 		}, this);
 
 		this.internalChain.clearChain();
@@ -10596,7 +10842,7 @@ Fx.Scroll = new Class({
 	},
 
 	toElement: function(el, axes){
-		axes = axes ? Array.from(axes) : ['x', 'y'];
+		axes = axes ? Array.convert(axes) : ['x', 'y'];
 		var scroll = isBody(this.element) ? {x: 0, y: 0} : this.element.getScroll();
 		var position = Object.map(document.id(el).getPosition(this.element), function(value, axis){
 			return axes.contains(axis) ? value + scroll[axis] : false;
@@ -10605,7 +10851,7 @@ Fx.Scroll = new Class({
 	},
 
 	toElementEdge: function(el, axes, offset){
-		axes = axes ? Array.from(axes) : ['x', 'y'];
+		axes = axes ? Array.convert(axes) : ['x', 'y'];
 		el = document.id(el);
 		var to = {},
 			position = el.getPosition(this.element),
@@ -10631,7 +10877,7 @@ Fx.Scroll = new Class({
 	},
 
 	toElementCenter: function(el, axes, offset){
-		axes = axes ? Array.from(axes) : ['x', 'y'];
+		axes = axes ? Array.convert(axes) : ['x', 'y'];
 		el = document.id(el);
 		var to = {},
 			position = el.getPosition(this.element),
@@ -10821,7 +11067,7 @@ Element.implement({
 				slide[flag ? 'slideOut' : 'slideIn'](mode);
 				this.store('slide:flag', !flag);
 				toggle = true;
-			break;
+				break;
 			default: slide.start(how, mode);
 		}
 		if (!toggle) this.eliminate('slide:flag');
@@ -11122,6 +11368,7 @@ var Drag = this.Drag = new Class({
 		limit: false,
 		handle: false,
 		invert: false,
+		unDraggableTags: ['button', 'input', 'a', 'textarea', 'select', 'option'],
 		preventDefault: false,
 		stopPropagation: false,
 		compensateScroll: false,
@@ -11153,7 +11400,7 @@ var Drag = this.Drag = new Class({
 		this.compensateScroll = {start: {}, diff: {}, last: {}};
 
 		if ('ondragstart' in document && !('FileReader' in window) && !Drag.ondragstartFixed){
-			document.ondragstart = Function.from(false);
+			document.ondragstart = Function.convert(false);
 			Drag.ondragstartFixed = true;
 		}
 
@@ -11163,7 +11410,7 @@ var Drag = this.Drag = new Class({
 			drag: this.drag.bind(this),
 			stop: this.stop.bind(this),
 			cancel: this.cancel.bind(this),
-			eventStop: Function.from(false),
+			eventStop: Function.convert(false),
 			scrollListener: this.scrollListener.bind(this)
 		};
 		this.attach();
@@ -11209,6 +11456,8 @@ var Drag = this.Drag = new Class({
 	},
 
 	start: function(event){
+		if (this.options.unDraggableTags.contains(event.target.get('tag'))) return;
+
 		var options = this.options;
 
 		if (event.rightClick) return;
@@ -11422,7 +11671,7 @@ Drag.Move = new Class({
 		this.overed = null;
 	},
 
-	setContainer: function(container) {
+	setContainer: function(container){
 		this.container = document.id(container);
 		if (this.container && typeOf(this.container) != 'element'){
 			this.container = document.id(this.container.getDocument().body);
@@ -11666,7 +11915,7 @@ var Sortables = this.Sortables = new Class({
 		}, this));
 	},
 
-	getDroppableCoordinates: function (element){
+	getDroppableCoordinates: function(element){
 		var offsetParent = element.getOffsetParent();
 		var position = element.getPosition(offsetParent);
 		var scroll = {
@@ -11681,7 +11930,7 @@ var Sortables = this.Sortables = new Class({
 			position.y -= scroll.w.y;
 		}
 
-        return position;
+		return position;
 	},
 
 	getClone: function(event, element){
@@ -11830,7 +12079,7 @@ requires:
   - Core/Element.Event
   - MooTools.More
 
-provides: [Assets]
+provides: [Assets, Asset.javascript, Asset.css, Asset.image, Asset.images]
 
 ...
 */
@@ -11933,7 +12182,7 @@ var Asset = this.Asset = {
 	},
 
 	images: function(sources, options){
-		sources = Array.from(sources);
+		sources = Array.convert(sources);
 
 		var fn = function(){},
 			counter = 0;
@@ -12008,7 +12257,7 @@ var Color = this.Color = new Type('Color', function(color, type){
 			var old = color;
 			color = color.hsbToRgb();
 			color.hsb = old;
-		break;
+			break;
 		case 'hex': color = color.hexToRgb(true); break;
 	}
 	color.rgb = color.slice(0, 3);
@@ -12066,14 +12315,15 @@ Array.implement({
 
 	rgbToHsb: function(){
 		var red = this[0],
-				green = this[1],
-				blue = this[2],
-				hue = 0;
-		var max = Math.max(red, green, blue),
-				min = Math.min(red, green, blue);
-		var delta = max - min;
-		var brightness = max / 255,
-				saturation = (max != 0) ? delta / max : 0;
+			green = this[1],
+			blue = this[2],
+			hue = 0,
+			max = Math.max(red, green, blue),
+			min = Math.min(red, green, blue),
+			delta = max - min,
+			brightness = max / 255,
+			saturation = (max != 0) ? delta / max : 0;
+
 		if (saturation != 0){
 			var rr = (max - red) / delta;
 			var gr = (max - green) / delta;
@@ -12327,7 +12577,6 @@ provides: [Element.Event.Pseudos.Keys]
 var keysStoreKey = '$moo:keys-pressed',
 	keysKeyupStoreKey = '$moo:keys-keyup';
 
-
 DOMEvent.definePseudo('keys', function(split, fn, args){
 
 	var event = args[0],
@@ -12385,7 +12634,7 @@ DOMEvent.defineKeys({
 	'107': '+',
 	'109': '-', // subtract
 	'189': '-'  // dash
-})
+});
 
 })();
 
@@ -12418,221 +12667,221 @@ provides: [Keyboard]
 
 (function(){
 
-	var Keyboard = this.Keyboard = new Class({
+var Keyboard = this.Keyboard = new Class({
 
-		Extends: Events,
+	Extends: Events,
 
-		Implements: [Options],
+	Implements: [Options],
 
-		options: {/*
-			onActivate: function(){},
-			onDeactivate: function(){},*/
-			defaultEventType: 'keydown',
-			active: false,
-			manager: null,
-			events: {},
-			nonParsedEvents: ['activate', 'deactivate', 'onactivate', 'ondeactivate', 'changed', 'onchanged']
-		},
+	options: {/*
+		onActivate: function(){},
+		onDeactivate: function(){},*/
+		defaultEventType: 'keydown',
+		active: false,
+		manager: null,
+		events: {},
+		nonParsedEvents: ['activate', 'deactivate', 'onactivate', 'ondeactivate', 'changed', 'onchanged']
+	},
 
-		initialize: function(options){
-			if (options && options.manager){
-				this._manager = options.manager;
-				delete options.manager;
+	initialize: function(options){
+		if (options && options.manager){
+			this._manager = options.manager;
+			delete options.manager;
+		}
+		this.setOptions(options);
+		this._setup();
+	},
+
+	addEvent: function(type, fn, internal){
+		return this.parent(Keyboard.parse(type, this.options.defaultEventType, this.options.nonParsedEvents), fn, internal);
+	},
+
+	removeEvent: function(type, fn){
+		return this.parent(Keyboard.parse(type, this.options.defaultEventType, this.options.nonParsedEvents), fn);
+	},
+
+	toggleActive: function(){
+		return this[this.isActive() ? 'deactivate' : 'activate']();
+	},
+
+	activate: function(instance){
+		if (instance){
+			if (instance.isActive()) return this;
+			//if we're stealing focus, store the last keyboard to have it so the relinquish command works
+			if (this._activeKB && instance != this._activeKB){
+				this.previous = this._activeKB;
+				this.previous.fireEvent('deactivate');
 			}
-			this.setOptions(options);
-			this._setup();
-		},
+			//if we're enabling a child, assign it so that events are now passed to it
+			this._activeKB = instance.fireEvent('activate');
+			Keyboard.manager.fireEvent('changed');
+		} else if (this._manager){
+			//else we're enabling ourselves, we must ask our parent to do it for us
+			this._manager.activate(this);
+		}
+		return this;
+	},
 
-		addEvent: function(type, fn, internal){
-			return this.parent(Keyboard.parse(type, this.options.defaultEventType, this.options.nonParsedEvents), fn, internal);
-		},
+	isActive: function(){
+		return this._manager ? (this._manager._activeKB == this) : (Keyboard.manager == this);
+	},
 
-		removeEvent: function(type, fn){
-			return this.parent(Keyboard.parse(type, this.options.defaultEventType, this.options.nonParsedEvents), fn);
-		},
-
-		toggleActive: function(){
-			return this[this.isActive() ? 'deactivate' : 'activate']();
-		},
-
-		activate: function(instance){
-			if (instance){
-				if (instance.isActive()) return this;
-				//if we're stealing focus, store the last keyboard to have it so the relinquish command works
-				if (this._activeKB && instance != this._activeKB){
-					this.previous = this._activeKB;
-					this.previous.fireEvent('deactivate');
-				}
-				//if we're enabling a child, assign it so that events are now passed to it
-				this._activeKB = instance.fireEvent('activate');
+	deactivate: function(instance){
+		if (instance){
+			if (instance === this._activeKB){
+				this._activeKB = null;
+				instance.fireEvent('deactivate');
 				Keyboard.manager.fireEvent('changed');
-			} else if (this._manager){
-				//else we're enabling ourselves, we must ask our parent to do it for us
-				this._manager.activate(this);
 			}
-			return this;
-		},
+		} else if (this._manager){
+			this._manager.deactivate(this);
+		}
+		return this;
+	},
 
-		isActive: function(){
-			return this._manager ? (this._manager._activeKB == this) : (Keyboard.manager == this);
-		},
+	relinquish: function(){
+		if (this.isActive() && this._manager && this._manager.previous) this._manager.activate(this._manager.previous);
+		else this.deactivate();
+		return this;
+	},
 
-		deactivate: function(instance){
-			if (instance){
-				if (instance === this._activeKB){
-					this._activeKB = null;
-					instance.fireEvent('deactivate');
-					Keyboard.manager.fireEvent('changed');
-				}
-			} else if (this._manager){
-				this._manager.deactivate(this);
-			}
-			return this;
-		},
+	//management logic
+	manage: function(instance){
+		if (instance._manager) instance._manager.drop(instance);
+		this._instances.push(instance);
+		instance._manager = this;
+		if (!this._activeKB) this.activate(instance);
+		return this;
+	},
 
-		relinquish: function(){
-			if (this.isActive() && this._manager && this._manager.previous) this._manager.activate(this._manager.previous);
-			else this.deactivate();
-			return this;
-		},
+	drop: function(instance){
+		instance.relinquish();
+		this._instances.erase(instance);
+		if (this._activeKB == instance){
+			if (this.previous && this._instances.contains(this.previous)) this.activate(this.previous);
+			else this._activeKB = this._instances[0];
+		}
+		return this;
+	},
 
-		//management logic
-		manage: function(instance){
-			if (instance._manager) instance._manager.drop(instance);
-			this._instances.push(instance);
-			instance._manager = this;
-			if (!this._activeKB) this.activate(instance);
-			return this;
-		},
+	trace: function(){
+		Keyboard.trace(this);
+	},
 
-		drop: function(instance){
-			instance.relinquish();
-			this._instances.erase(instance);
-			if (this._activeKB == instance){
-				if (this.previous && this._instances.contains(this.previous)) this.activate(this.previous);
-				else this._activeKB = this._instances[0];
-			}
-			return this;
-		},
+	each: function(fn){
+		Keyboard.each(this, fn);
+	},
 
-		trace: function(){
-			Keyboard.trace(this);
-		},
+	/*
+		PRIVATE METHODS
+	*/
 
-		each: function(fn){
-			Keyboard.each(this, fn);
-		},
+	_instances: [],
 
-		/*
-			PRIVATE METHODS
-		*/
+	_disable: function(instance){
+		if (this._activeKB == instance) this._activeKB = null;
+	},
 
-		_instances: [],
+	_setup: function(){
+		this.addEvents(this.options.events);
+		//if this is the root manager, nothing manages it
+		if (Keyboard.manager && !this._manager) Keyboard.manager.manage(this);
+		if (this.options.active) this.activate();
+		else this.relinquish();
+	},
 
-		_disable: function(instance){
-			if (this._activeKB == instance) this._activeKB = null;
-		},
+	_handle: function(event, type){
+		//Keyboard.stop(event) prevents key propagation
+		if (event.preventKeyboardPropagation) return;
 
-		_setup: function(){
-			this.addEvents(this.options.events);
-			//if this is the root manager, nothing manages it
-			if (Keyboard.manager && !this._manager) Keyboard.manager.manage(this);
-			if (this.options.active) this.activate();
-			else this.relinquish();
-		},
-
-		_handle: function(event, type){
-			//Keyboard.stop(event) prevents key propagation
+		var bubbles = !!this._manager;
+		if (bubbles && this._activeKB){
+			this._activeKB._handle(event, type);
 			if (event.preventKeyboardPropagation) return;
-
-			var bubbles = !!this._manager;
-			if (bubbles && this._activeKB){
-				this._activeKB._handle(event, type);
-				if (event.preventKeyboardPropagation) return;
-			}
-			this.fireEvent(type, event);
-
-			if (!bubbles && this._activeKB) this._activeKB._handle(event, type);
 		}
+		this.fireEvent(type, event);
 
+		if (!bubbles && this._activeKB) this._activeKB._handle(event, type);
+	}
+
+});
+
+var parsed = {};
+var modifiers = ['shift', 'control', 'alt', 'meta'];
+var regex = /^(?:shift|control|ctrl|alt|meta)$/;
+
+Keyboard.parse = function(type, eventType, ignore){
+	if (ignore && ignore.contains(type.toLowerCase())) return type;
+
+	type = type.toLowerCase().replace(/^(keyup|keydown):/, function($0, $1){
+		eventType = $1;
+		return '';
 	});
 
-	var parsed = {};
-	var modifiers = ['shift', 'control', 'alt', 'meta'];
-	var regex = /^(?:shift|control|ctrl|alt|meta)$/;
+	if (!parsed[type]){
+		if (type != '+'){
+			var key, mods = {};
+			type.split('+').each(function(part){
+				if (regex.test(part)) mods[part] = true;
+				else key = part;
+			});
 
-	Keyboard.parse = function(type, eventType, ignore){
-		if (ignore && ignore.contains(type.toLowerCase())) return type;
+			mods.control = mods.control || mods.ctrl; // allow both control and ctrl
 
-		type = type.toLowerCase().replace(/^(keyup|keydown):/, function($0, $1){
-			eventType = $1;
-			return '';
-		});
+			var keys = [];
+			modifiers.each(function(mod){
+				if (mods[mod]) keys.push(mod);
+			});
 
-		if (!parsed[type]){
-		    if (type != '+'){
-				var key, mods = {};
-				type.split('+').each(function(part){
-					if (regex.test(part)) mods[part] = true;
-					else key = part;
-				});
-
-				mods.control = mods.control || mods.ctrl; // allow both control and ctrl
-
-				var keys = [];
-				modifiers.each(function(mod){
-					if (mods[mod]) keys.push(mod);
-				});
-
-				if (key) keys.push(key);
-				parsed[type] = keys.join('+');
-			} else {
-			    parsed[type] = type;
-			}
+			if (key) keys.push(key);
+			parsed[type] = keys.join('+');
+		} else {
+			parsed[type] = type;
 		}
+	}
 
-		return eventType + ':keys(' + parsed[type] + ')';
-	};
+	return eventType + ':keys(' + parsed[type] + ')';
+};
 
-	Keyboard.each = function(keyboard, fn){
-		var current = keyboard || Keyboard.manager;
-		while (current){
-			fn(current);
-			current = current._activeKB;
-		}
-	};
+Keyboard.each = function(keyboard, fn){
+	var current = keyboard || Keyboard.manager;
+	while (current){
+		fn(current);
+		current = current._activeKB;
+	}
+};
 
-	Keyboard.stop = function(event){
-		event.preventKeyboardPropagation = true;
-	};
+Keyboard.stop = function(event){
+	event.preventKeyboardPropagation = true;
+};
 
-	Keyboard.manager = new Keyboard({
-		active: true
+Keyboard.manager = new Keyboard({
+	active: true
+});
+
+Keyboard.trace = function(keyboard){
+	keyboard = keyboard || Keyboard.manager;
+	var hasConsole = window.console && console.log;
+	if (hasConsole) console.log('the following items have focus: ');
+	Keyboard.each(keyboard, function(current){
+		if (hasConsole) console.log(document.id(current.widget) || current.wiget || current);
+	});
+};
+
+var handler = function(event){
+	var keys = [];
+	modifiers.each(function(mod){
+		if (event[mod]) keys.push(mod);
 	});
 
-	Keyboard.trace = function(keyboard){
-		keyboard = keyboard || Keyboard.manager;
-		var hasConsole = window.console && console.log;
-		if (hasConsole) console.log('the following items have focus: ');
-		Keyboard.each(keyboard, function(current){
-			if (hasConsole) console.log(document.id(current.widget) || current.wiget || current);
-		});
-	};
+	if (!regex.test(event.key)) keys.push(event.key);
+	Keyboard.manager._handle(event, event.type + ':keys(' + keys.join('+') + ')');
+};
 
-	var handler = function(event){
-		var keys = [];
-		modifiers.each(function(mod){
-			if (event[mod]) keys.push(mod);
-		});
-
-		if (!regex.test(event.key)) keys.push(event.key);
-		Keyboard.manager._handle(event, event.type + ':keys(' + keys.join('+') + ')');
-	};
-
-	document.addEvents({
-		'keyup': handler,
-		'keydown': handler
-	});
+document.addEvents({
+	'keyup': handler,
+	'keydown': handler
+});
 
 })();
 
@@ -12674,7 +12923,7 @@ Keyboard.implement({
 		this._shortcuts = this._shortcuts || [];
 		this._shortcutIndex = this._shortcutIndex || {};
 
-		shortcut.getKeyboard = Function.from(this);
+		shortcut.getKeyboard = Function.convert(this);
 		shortcut.name = name;
 		this._shortcutIndex[name] = shortcut;
 		this._shortcuts.push(shortcut);
@@ -12713,14 +12962,13 @@ Keyboard.implement({
 });
 
 Keyboard.rebind = function(newKeys, shortcuts){
-	Array.from(shortcuts).each(function(shortcut){
+	Array.convert(shortcuts).each(function(shortcut){
 		shortcut.getKeyboard().removeEvent(shortcut.keys, shortcut.handler);
 		shortcut.getKeyboard().addEvent(newKeys, shortcut.handler);
 		shortcut.keys = newKeys;
 		shortcut.getKeyboard().fireEvent('rebound');
 	});
 };
-
 
 Keyboard.getActiveShortcuts = function(keyboard){
 	var activeKBS = [], activeSCS = [];
@@ -12733,11 +12981,11 @@ Keyboard.getShortcut = function(name, keyboard, opts){
 	opts = opts || {};
 	var shortcuts = opts.many ? [] : null,
 		set = opts.many ? function(kb){
-				var shortcut = kb.getShortcut(name);
-				if (shortcut) shortcuts.push(shortcut);
-			} : function(kb){
-				if (!shortcuts) shortcuts = kb.getShortcut(name);
-			};
+			var shortcut = kb.getShortcut(name);
+			if (shortcut) shortcuts.push(shortcut);
+		} : function(kb){
+			if (!shortcuts) shortcuts = kb.getShortcut(name);
+		};
 	Keyboard.each(keyboard, set);
 	return shortcuts;
 };
@@ -13032,8 +13280,8 @@ var Tips = this.Tips = new Class({
 			['title', 'text'].each(function(value){
 				var content = element.retrieve('tip:' + value);
 				var div = this['_' + value + 'Element'] = new Element('div', {
-						'class': 'tip-' + value
-					}).inject(this.container);
+					'class': 'tip-' + value
+				}).inject(this.container);
 				if (content){
 					this.fill(div, content);
 					showTip = true;
@@ -13211,7 +13459,6 @@ Element.disableCustomEvents = function(){
 
 })();
 
-
 /*
 ---
 
@@ -13235,7 +13482,7 @@ Browser.Features.Touch = (function(){
 		document.createEvent('TouchEvent').initTouchEvent('touchstart');
 		return true;
 	} catch (exception){}
-	
+
 	return false;
 })();
 
@@ -13263,7 +13510,6 @@ Browser.Features.iOSTouch = (function(){
 	handler(); // Remove listener
 	return false;
 })();
-
 
 /*
 ---
@@ -13305,17 +13551,17 @@ var events = {
 		active = true;
 		start = {x: touch.pageX, y: touch.pageY};
 	},
-	
+
 	touchmove: function(event){
 		if (disabled || !active) return;
-		
+
 		var touch = event.changedTouches[0],
 			end = {x: touch.pageX, y: touch.pageY};
 		if (this.retrieve(cancelKey) && Math.abs(start.y - end.y) > 10){
 			active = false;
 			return;
 		}
-		
+
 		var distance = this.retrieve(distanceKey, dflt),
 			delta = end.x - start.x,
 			isLeftSwipe = delta < -distance,
@@ -13323,13 +13569,13 @@ var events = {
 
 		if (!isRightSwipe && !isLeftSwipe)
 			return;
-		
+
 		event.preventDefault();
 		active = false;
 		event.direction = (isLeftSwipe ? 'left' : 'right');
 		event.start = start;
 		event.end = end;
-		
+
 		this.fireEvent(name, event);
 	},
 
