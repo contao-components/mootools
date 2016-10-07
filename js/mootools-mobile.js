@@ -1,4 +1,13 @@
-// packager build Custom-Event/* Mobile/Browser.Features.Touch Mobile/Swipe
+/*
+---
+MooTools Mobile
+
+packager build:
+ - Custom-Event/* Mobile/Browser.Features.Touch Mobile/Swipe
+
+...
+*/
+
 /*
 ---
 

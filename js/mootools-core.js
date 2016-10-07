@@ -1784,7 +1784,7 @@ provides: Slick.Parser
 ...
 */
 
-;(function(){
+(function(){
 
 var parsed,
 	separatorIndex,
@@ -2016,7 +2016,7 @@ requires: Slick.Parser
 ...
 */
 
-;(function(){
+(function(){
 
 var local = {},
 	featuresCache = {},
