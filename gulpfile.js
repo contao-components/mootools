@@ -20,4 +20,4 @@ gulp.task('minify-js', function (cb) {
     );
 });
 
-gulp.task('default', ['minify-js']);
+gulp.task('default', gulp.parallel('minify-js'));
