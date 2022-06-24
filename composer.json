@@ -1,12 +1,12 @@
 {
     "name": "contao-components/mootools",
-    "type": "contao-component",
     "description": "MooTools integration for Contao Open Source CMS",
     "license": "MIT",
+    "type": "contao-component",
     "authors": [
         {
-            "name": "Leo Feyer",
-            "homepage": "https://github.com/leofeyer"
+            "name": "MooTools Development Team",
+            "homepage": "http://mootools.net/developers"
         }
     ],
     "require": {
