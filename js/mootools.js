@@ -157,10 +157,6 @@ String.convert = function(item){
 	return item + '';
 };
 
-/*<1.5compat>*/
-Array.from = Array.convert;
-/*</1.5compat>*/
-
 Function.from = Function.convert;
 Number.from = Number.convert;
 String.from = String.convert;
