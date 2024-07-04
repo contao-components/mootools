@@ -850,7 +850,7 @@ Date.implement({
 					case 'I': return pad((d.get('hr') % 12) || 12, 2);
 					case 'j': return pad(d.get('dayofyear'), 3);
 					case 'k': return pad(d.get('hr'), 2, ' ');
-					case 'l': return d.get('hr'); // PATCH: see contao/contao#7321
+					case 'l': return (d.get('hr') % 12) || 12; // PATCH: see contao/contao#7321
 					case 'L': return pad(d.get('ms'), 3);
 					case 'm': return pad((d.get('mo') + 1), 2);
 					case 'M': return pad(d.get('min'), 2);
