@@ -1,23 +1,12 @@
-'use strict';
+const { src, dest } = require('gulp');
+const rename = require('gulp-rename');
+const uglify = require('gulp-uglify');
 
-var gulp = require('gulp'),
-    ignore = require('gulp-ignore'),
-    rename = require('gulp-rename'),
-    uglify = require('gulp-uglify'),
-    pump = require('pump');
+function minify() {
+    return src(['js/*.js', '!js/*.min.js'])
+        .pipe(uglify())
+        .pipe(rename({ suffix: '.min' }))
+        .pipe(dest('js'));
+}
 
-gulp.task('minify-js', function (cb) {
-    pump([
-            gulp.src('js/*.js'),
-            ignore.exclude('*.min.js'),
-            uglify(),
-            rename({
-                suffix: '.min'
-            }),
-            gulp.dest('js')
-        ],
-        cb
-    );
-});
-
-gulp.task('default', gulp.parallel('minify-js'));
+exports.default = minify;
